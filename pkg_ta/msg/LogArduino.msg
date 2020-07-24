@@ -1,0 +1,13 @@
+Header header
+float32 steering_setpoint
+int32 steering_absolute_encoder
+float32 steering_angle
+float32 steering_delta
+float32 throttle_voltage
+float32 brake_setpoint
+float32 brake_current
+int32 brake_current_sensor
+float32 brake_position
+int32 brake_linear_encoder
+int32 brake_pwm
+float32 braking_delta
