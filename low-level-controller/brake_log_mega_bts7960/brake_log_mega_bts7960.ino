@@ -1,5 +1,5 @@
 /*
-  THIS CODE IS MADE FOR ARDUINO NANO !
+  THIS CODE IS MADE FOR ARDUINO MEGA using the PWM controlled by Timer 5 !
   Don't forget to change the counter if you use another board !
  
   LogArduino.h:
@@ -10,12 +10,16 @@
     5) steering_delta
     6) throttle_voltage
     7) brake_setpoint
-    8) brake_current
-    9) brake_current_sensor
-    10) brake_position
-    11) brake_linear_encoder
-    12) brake_pwm
-
+    8) brake_linear_encoder
+    9) brake_position
+    10) brake_delta
+    11) brake_current
+    12) brake_R_IS
+    13) brake_L_IS
+    14) brake_R_current
+    15) brake_L_current
+    16) brake_pwm
+    17) brake_state
   Control.h:
     1) header
     2) steer
@@ -49,12 +53,11 @@ unsigned long ros_time = 0; // Milisecond
 /************* BRAKING GLOBAL VARIABLE *************/
 float braking_setpoint = 0; // cm
 float braking_position = 0; // cm
-float braking_current = 0; // Ampere
 float braking_delta_min_move = 0.025; // cm (must be less than stay)
 float braking_delta_min_stay = 0.051; // cm (must be greater than move)
 float braking_zero_offset = 0.0f;
 bool braking_moving = false;
-int braking_sign = 1; // -1 or +1. To give the sign while calculating the measured current
+String braking_state = "STOP"; // STOP | PULL | RELEASE
 #define max_brake 3.0
 #define min_brake 0.0
 /***************************************************/
@@ -79,6 +82,7 @@ void setup() {
   pinMode(LPWM, OUTPUT);
   analogWrite(RPWM, 0);
   analogWrite(LPWM, 0);
+  braking_state = "STOP";
 
   nh.getHardware()-> setBaud(BAUD);
   nh.initNode();
@@ -92,13 +96,15 @@ void setup() {
   pub_msg.steering_delta = 0.;
   pub_msg.throttle_voltage = 0.;
   pub_msg.brake_setpoint = braking_setpoint;
+  braking_state.toCharArray(pub_msg.brake_state, braking_state.length());
 }
 
 void loop() {
   if ((micros() - update_braking_time) >= update_braking_period){
     update_braking_time = micros();
     
-    sensing_braking();
+    sensing_braking_position();
+    sensing_braking_current();
     process_braking();
   }
 
@@ -111,32 +117,34 @@ void loop() {
   nh.spinOnce();
 }
 
-void sensing_braking(){
+void sensing_braking_position(){
   float lin_dist = analogRead(LIN_ENC);
-  pub_msg.brake_linear_encoder = int(lin_dist + 0.5);
+  pub_msg.brake_linear_encoder = lin_dist;
 
   lin_dist = (lin_dist - braking_zero_offset) / 98.8;
   pub_msg.brake_position = lin_dist;
   braking_position = lin_dist;
+}
 
+void sensing_braking_current(){
   float current_read;
-  if (braking_sign == 1){
-    current_read = analogRead(R_IS);
-  }
-  else{
-    current_read = analogRead(L_IS);
-  }
-  pub_msg.brake_current_sensor = int(current_read + 0.5);
+  
+  current_read = analogRead(R_IS);
+  pub_msg.brake_R_IS = current_read;
   current_read = current_read * current_gain ; // A
-  pub_msg.brake_current = current_read;
-  braking_current = current_read;
+  pub_msg.brake_R_current = current_read;
+
+  current_read = analogRead(L_IS);
+  pub_msg.brake_L_IS = current_read;
+  current_read = current_read * current_gain ; // A
+  pub_msg.brake_L_current = current_read;
 }
 
 void process_braking(){
   int pwm = 0;
   
   float delta_brake = braking_setpoint - braking_position;
-  pub_msg.braking_delta = delta_brake;
+  pub_msg.brake_delta = delta_brake;
   
   if (!braking_moving && abs(delta_brake) >= braking_delta_min_stay){
     braking_moving = true;
@@ -148,26 +156,26 @@ void process_braking(){
   if(braking_moving){
     pwm = 255;
     if (braking_setpoint == 0.0){ pwm = 150; }
-    else if (braking_setpoint <= 0.25 * max_brake){ pwm = 100; } //0.3875cm
-    else if (braking_setpoint <= 0.375 * max_brake){ pwm = 150; } //0.58125cm
-    else if (braking_setpoint <= 0.60 * max_brake){ pwm = 155; } //0.93cm
-    else if (braking_setpoint <= 0.75 * max_brake){ pwm = 165; } //1.1625cm
-    else if (braking_setpoint <= 0.80 * max_brake){ pwm = 175; } //1.24cm
-    else if (braking_setpoint <= 0.85 * max_brake){ pwm = 200; } //1.3175cm
+    else if (braking_setpoint <= 0.25 * max_brake){ pwm = 100; }
+    else if (braking_setpoint <= 0.375 * max_brake){ pwm = 150; }
+    else if (braking_setpoint <= 0.60 * max_brake){ pwm = 155; }
+    else if (braking_setpoint <= 0.75 * max_brake){ pwm = 165; }
+    else if (braking_setpoint <= 0.80 * max_brake){ pwm = 175; }
+    else if (braking_setpoint <= 0.85 * max_brake){ pwm = 200; }
 
     if(delta_brake >= 0){
-      braking_sign = 1;
+      braking_state = "PULL";
       analogWrite(LPWM, 0);
       analogWrite(RPWM, pwm);
     }
     else{
-      braking_sign = -1;
+      braking_state = "RELEASE";
       analogWrite(RPWM, 0);
       analogWrite(LPWM, pwm);
     }
   }
   else {
-    braking_sign = 1;
+    braking_state = "STOP";
     pwm = 0;
     
     analogWrite(RPWM, 0);
@@ -175,4 +183,5 @@ void process_braking(){
   }
   
   pub_msg.brake_pwm = pwm;
+  braking_state.toCharArray(pub_msg.brake_state, braking_state.length());
 }
