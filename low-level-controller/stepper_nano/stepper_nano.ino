@@ -5,9 +5,9 @@
   DIR HIGH --> Counter Clockwise (KIRI)
 */
 
-#define ENA  5 // Enable pin
-#define DIR  4 // Direction pin
 #define PUL  3 // Pulse pin
+#define DIR  4 // Direction pin
+#define ENA  5 // Enable pin
 #define S1  6 // Direction Pin
 #define S2  7 // Direction Pin
 
@@ -34,15 +34,12 @@ unsigned long run_time = 0;
 volatile bool move_ = LOW; // State of the stepper motor, STALL (LOW) or MOVING (HIGH)
 volatile bool step_logic = HIGH; // The step logic (the driver needs sequence of high-low pulse to drive the stepper motor)
 volatile bool dir = HIGH; // The direction of the rotation or movement
-volatile bool prev_dir = LOW; // The previous direction of the rotation or movement
+volatile bool prev_dir = dir; // The previous direction of the rotation or movement
 
-int now = 0;
+int dt = 0;
 bool s1,s2;
 
 void setup() {
-  Serial.begin(115200);
-  Serial.println("BEGIN");
-  
   pinMode(ENA, OUTPUT);
   pinMode(DIR, OUTPUT);
   pinMode(PUL, OUTPUT);
@@ -50,18 +47,17 @@ void setup() {
   pinMode(S2, INPUT);
   
   digitalWrite(ENA, LOW); // Turn ON the stepper motor
-  digitalWrite(DIR, HIGH); // Set the direction of the movement (for initialization)
+  digitalWrite(DIR, dir); // Set the direction of the movement (for initialization)
 
   attachInterrupt(digitalPinToInterrupt(2), interrupt, RISING); // Set the interrupt pin to detect whether
                                                                 // there is a signal from the Arduino Mega or not
-  Serial.println("LOOP");
 }
 
 void loop() {
-  now = micros() - start_time;
+  dt = micros() - start_time;
   
-  if ( now > delay_micros) {
-    if ( now > max_delay ) { 
+  if ( dt > delay_micros) {
+    if ( dt > max_delay ) { 
       // If the delay between the two pulses is too long,
       // the timing will be reset to the initial timing  
       delay_micros = initial;
@@ -105,12 +101,6 @@ void interrupt()
     delay_micros = initial;
     move_ = LOW;
   }
-
-//  if(move_){
-//    digitalWrite(ENA, LOW);
-//  } else {
-//    digitalWrite(ENA, HIGH);
-//  }
   
   // If the commanded direction is changed, update the direction and drive the stepper motor to the desired direction.
   // Note that the direction is updated ONLY when direction is changed.
@@ -121,10 +111,4 @@ void interrupt()
     // step_logic = dir; // I think, this line of code doesn't matter//
     delay_micros = initial;
   }
-  Serial.println(dir);
-  
-  //Serial.print("DIR : ");
-  //Serial.print(dir);
-  //Serial.print("  |  move_ : ");
-  //Serial,k.println(move_);
 }
