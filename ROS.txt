@@ -1,0 +1,39 @@
+Catatan untuk ROS :
+
+Python :
+1) Publisher : Sistemnya panggil fungsi publish
+2) Subscriber : Ga perlu manggil suatu fungsi buat subscribe
+
+Arduino :
+1) Publish : Manggil fungsi buat publish
+2) Subscribe : Perlu nyalain spinOnce() (gak kaya MQTT). Kalau ada message baru, prosedur callback akan berjalan, kalau ngga ya ngga.
+3) Saat mau generate tipe message baru, Tutorial di web ROS nya ga bisa di gue (Adamsyah). Yang dilakukan:
+- hapus ros_lib
+- GANTI ENVIRONMENT ke environment package yang message custom tersebut ada di dalamnya
+- terus bikin ros_lib kaya biasa : rosrun rosserial_arduino make_libraries.py ~/Arduino/libraries
+4) Untuk running arduino :
+- rosrun rosserial_python serial_node.py /dev/ttyUSB0
+- rosrun rosserial_arduino serial_node.py _port:=/dev/ttyUSB0 <-- + Reset Arduino
+5) Kalau mau publish + subscribe, bikin NODE HANYA PERLU SEKALI SAJA (1 ARDUINO = 1 NODE)
+6) Jangan lupa nh.spinOnce() nya dikasih timing atau delay (INI PERLU PENYELIDIKAN LEBIH LANJUT. KALAU HIGH SPEED PERLU PAKAI INI ATAU TIDAK (?))
+7) Di Arduino Nano --> Serial.println(delay_micros) --> Baud Rate makin tinggi, roda makin cepet muter (ini belum tau kenapa)
+    TERNYATA SERIAL.PRINT SENDIRI MAKAN WAKTU CUKUP LAMA (RATUSAN MIKROSEKON)
+	Kayanya kalau udh siap running, mending gausah pake Serial atau Baud Rate ditinggiin sekalian
+
+General :
+1) Jangan lupa source ~/<workspace>/devel/setup.bash untuk pake environment yang dibuat
+2) Kalau mau cek environment, echo $ROS_PACKAGE_PATH
+3) Kalau bikin tipe message baru, harus di catkin_make
+4) ROS Melodic dan sebelumnya tuh default-nya Python 2. Kalau mau Python 3, catkin_make nya harus ada yang ditambahin (cek google ROS catkin workspace) : catkin_make -DPYTHON_EXECUTABLE=/usr/bin/python3 -DPYTHON_INCLUDE_DIR=/usr/include/python3.6m -DPYTHON_LIBRARY=/usr/lib/libpython3.6m.so
+5) Pake roslaunch kalau mau running file Python sekaligus (gaperlu tulis roscore, python3 <name>.py)
+6) roslaunch defaultnya Python 2, kecuali pake Anaconda bisa jadi Python 3
+
+Juli 2020:
+1) Semakin tinggi baudrate, semakin banyak data yang bisa ditransfer dalam satuan waktu --> Tapi kalau ketinggian bisa error
+2) Baudrate amannya 500000 --> https://www.google.com/search?client=ubuntu&channel=fs&q=arduino+maximum+baudrate&ie=utf-8&oe=utf-8
+3) Baudrate default 57600 untuk board yang pakai (ArduinoHardware.h). Khusus board yang pakai (ArduinoTCPHardware.h), baudrate default 115200
+4) Baudrate bisa diganti
+    https://answers.ros.org/question/206972/baud-rate-parameter-in-rosserial_python-arduino/
+    http://wiki.ros.org/rosserial_arduino/Tutorials/NodeHandle%20and%20ArduinoHardware
+5) Kalau pakai ESP32 atau ESP8266 atau board yang pakai (ArduinoHardware.h) DAN MAU PAKE SERIAL --> Kudu diganti dulu jadi ArduinoHardware.h (dari library nya)
+    Caranya bisa edit langsung ke folder library, atau bisa ikutin http://wiki.ros.org/rosserial_arduino/Tutorials/NodeHandle%20and%20ArduinoHardware dengan menghapus yang ga perlu

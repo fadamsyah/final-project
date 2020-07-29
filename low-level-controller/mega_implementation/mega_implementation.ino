@@ -37,6 +37,7 @@
 #include <Wire.h>
 #include <pkg_ta/Control.h>
 #include <pkg_ta/LogArduino.h>
+#include <Adafruit_MCP4725.h>
 #define BAUD 500000
 
 /********************** PIN CONFIGURATION *************************/
@@ -51,8 +52,9 @@ int ENCODER[ ] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11}; // Absolute Encoder Pin
 #define LIN_ENC A1
 #define R_IS A2
 #define L_IS A3
+#define THROTTLE_ENA A4
 #define res_val 660.0f // Ohm (Value of The Resistor)
-#define current_gain (8500.0f*5.0f/1023.0f/res_val);
+#define current_gain (8500.0f*4.95f/1023.0f/res_val);
 /******************************************************************/
 
 /**********************TIMING*************************/
@@ -75,8 +77,10 @@ bool s2_prev = HIGH;
 float angle = 0;
 float delta_steer = 0;
 String steering_state = "STOP";
-#define max_steer 28.0
-#define min_steer -35.0
+#define max_steer 28.0f
+#define min_steer -35.0f
+#define steering_gradient 0.09053716f
+#define steering_bias -42.12905785f
 /***************************************************/
 
 /************* BRAKING GLOBAL VARIABLE *************/
@@ -87,8 +91,17 @@ float braking_delta_min_stay = 0.051; // cm (must be greater than move)
 float braking_zero_offset = 0.0f;
 bool braking_moving = false;
 String braking_state = "STOP"; // STOP | PULL | RELEASE
-#define max_brake 3.0
-#define min_brake 0.0
+#define max_brake 3.0f
+#define min_brake 0.0f
+#define breaking_gradient 0.01012f
+#define breaking_bias 0.0f
+#define bf_coeff 0.75f
+/***************************************************/
+
+/************* THROTTLE GLOBAL VARIABLE *************/
+float throttle_setpoint = 0; // 0-1
+float throttle_voltage = 0; // 0-4095
+Adafruit_MCP4725 dac;
 /***************************************************/
 
 ros::NodeHandle  nh;
@@ -101,6 +114,8 @@ void receive_message(const pkg_ta::Control& sub_msg) {
 
   braking_setpoint = min(max(sub_msg.brake, min_brake), max_brake);
   pub_msg.brake_setpoint = braking_setpoint;
+
+  throttle_setpoint = min(max(sub_msg.throttle, 0), 1);
 }
 
 ros::Subscriber<pkg_ta::Control> sub("control_signal", &receive_message );
@@ -128,11 +143,15 @@ void setup() {
   nh.advertise(pub);
   nh.subscribe(sub);
 
+  dac.begin(0x60); 
+  dac.setVoltage(0, true);
+  pinMode(THROTTLE_ENA, OUTPUT);
+
   pub_msg.header.frame_id = "/log_arduino_mega";
   pub_msg.steering_setpoint = steering_setpoint;
   pub_msg.brake_setpoint = braking_setpoint;
-  steering_state.toCharArray(pub_msg.steering_state, steering_state.length());
-  braking_state.toCharArray(pub_msg.brake_state, braking_state.length());
+  //steering_state.toCharArray(pub_msg.steering_state, steering_state.length());
+  //braking_state.toCharArray(pub_msg.brake_state, braking_state.length());
 }
 
 void loop() {
@@ -140,20 +159,23 @@ void loop() {
     update_steering_time = millis();
     
     sensing_steering();
-    process_steering();    
+    process_steering();
+    process_throttling();    
   }
 
   if ((micros() - update_braking_time) >= update_braking_period){
     update_braking_time = micros();
     
     sensing_braking_position();
-    sensing_braking_current();
+    //sensing_braking_current(); // Kalau ga dipake, taruh di loop ros aja
     process_braking();
+    
   }
 
   if ((millis() - ros_time) >= ros_period) { // Publish the pub_msg
     ros_time = millis();
     
+    sensing_braking_current();
     pub_msg.header.stamp = nh.now();
     pub.publish( &pub_msg);
   }
@@ -174,7 +196,7 @@ void sensing_steering() {
   if(angle<500) { angle += 1024;}
   angle -= 500;
   
-  steering_angle = 0.09053716*angle - 42.12905785; // convert encoder to angle (ackerman)
+  steering_angle = steering_gradient*angle + steering_bias; // convert encoder to angle (ackerman)
   pub_msg.steering_angle = steering_angle;
   
 }
@@ -212,16 +234,16 @@ void process_steering() {
     s2_prev = s2;
   }
 
-  steering_state.toCharArray(pub_msg.steering_state, steering_state.length());
+  //steering_state.toCharArray(pub_msg.steering_state, steering_state.length());
 }
 
 void sensing_braking_position(){
   float lin_dist = analogRead(LIN_ENC);
   pub_msg.brake_linear_encoder = lin_dist;
 
-  lin_dist = (lin_dist - braking_zero_offset) / 98.8;
+  lin_dist = breaking_gradient*lin_dist + breaking_bias;
   pub_msg.brake_position = lin_dist;
-  braking_position = lin_dist;
+  braking_position = bf_coeff*braking_position + (1.0f - bf_coeff)*lin_dist;
 }
 
 void sensing_braking_current(){
@@ -253,11 +275,11 @@ void process_braking(){
   
   if(braking_moving){
     pwm = 255;
-    if (braking_setpoint == 0.0){ pwm = 150; }
+    if (braking_setpoint == 0.0){ pwm = 180; }
     else if (braking_setpoint <= 0.25 * max_brake){ pwm = 100; }
-    else if (braking_setpoint <= 0.375 * max_brake){ pwm = 150; }
-    else if (braking_setpoint <= 0.60 * max_brake){ pwm = 155; }
-    else if (braking_setpoint <= 0.75 * max_brake){ pwm = 165; }
+    else if (braking_setpoint <= 0.375 * max_brake){ pwm = 110; }
+    else if (braking_setpoint <= 0.60 * max_brake){ pwm = 130; }
+    else if (braking_setpoint <= 0.75 * max_brake){ pwm = 150; }
     else if (braking_setpoint <= 0.80 * max_brake){ pwm = 175; }
     else if (braking_setpoint <= 0.85 * max_brake){ pwm = 200; }
 
@@ -281,5 +303,21 @@ void process_braking(){
   }
   
   pub_msg.brake_pwm = pwm;
-  braking_state.toCharArray(pub_msg.brake_state, braking_state.length());
+  //braking_state.toCharArray(pub_msg.brake_state, braking_state.length());
+}
+
+void process_throttling(){
+  throttle_voltage = floor(throttle_setpoint * 0.6 * 4095); // Voltage max = 60% dari 4096
+  
+  // ENABLE
+  if(throttle_voltage>0){ //perlu cari deadband throttle
+    digitalWrite(THROTTLE_ENA, HIGH);
+  } else {
+    digitalWrite(THROTTLE_ENA, LOW);
+  }
+
+  // SPEED COMMAND
+  dac.setVoltage(throttle_voltage, false);
+  
+  pub_msg.throttle_voltage = throttle_voltage;
 }

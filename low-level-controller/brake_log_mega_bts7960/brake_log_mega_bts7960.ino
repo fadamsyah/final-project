@@ -96,7 +96,7 @@ void setup() {
   pub_msg.steering_delta = 0.;
   pub_msg.throttle_voltage = 0.;
   pub_msg.brake_setpoint = braking_setpoint;
-  braking_state.toCharArray(pub_msg.brake_state, braking_state.length());
+  //braking_state.toCharArray(pub_msg.brake_state, braking_state.length());
 }
 
 void loop() {
@@ -183,5 +183,5 @@ void process_braking(){
   }
   
   pub_msg.brake_pwm = pwm;
-  braking_state.toCharArray(pub_msg.brake_state, braking_state.length());
+  //braking_state.toCharArray(pub_msg.brake_state, braking_state.length()); // Ini bikin BUG
 }
