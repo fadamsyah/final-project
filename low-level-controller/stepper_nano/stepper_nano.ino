@@ -11,22 +11,19 @@
 #define S1  6 // Direction Pin
 #define S2  7 // Direction Pin
 
-int initial = 600; // Mikrosekon || The maximum timing of the stepper motor
+#define initial  600 // Mikrosekon || The maximum timing of the stepper motor
+#define max_delay  650 // If the delay between the two pulses is too long,
+                       // the stepper will fail if the timing at that time is small.
+                       // Therefore, the timing of the stepper must be reset to initial timing
+#define N 3
+const int limit[N] = {450, 200, 150}; // Microsecond || The limit of the stepper's timing of the first, second, & third acceleration
+                                      // i.e. the MINIMUM timing of the stepper motor
+const float increment[N] = {-1.0f, -3.0f, -0.5f}; // At the begining, the required torque is large because of the friction force acting to the tire
+                                                  // Therefore, the acceleration must be small in the begining of the movement of the stepper motor
+                                                  // When the timing is low, i.e. the movement of the stepper is extremely fast, the acceleration must be
+                                                  // small. Otherwise, the stepper will fail to follow the reference current                          
 float delay_micros = initial; // Mikrosekon || The instantaneous timing of the stepper motor
-int limit_1 = 450; // Microsecond || The limit of the stepper's timing of the first acceleration
-int limit_2 = 200; // Microsecond || The limit of the stepper's timing of the second acceleration
-int limit_3 = 150; // Microsecond || The limit of the stepper's timing of the third acceleration
-                   // i.e. the MINIMUM timing of the stepper motor
-int increment_1 = -1; // The first acceleration of the stepper motor
-                      // At the begining, the required torque is large because of the friction force acting to the tire
-                      // Therefore, the acceleration must be small in the begining of the movement of the stepper motor
-int increment_2 = -3; // The second acceleration of the stepper motor
-float increment_3 = -0.5; // The third acceleration of the stepper motor
-                          // When the timing is low, i.e. the movement of the stepper is extremely fast, the acceleration must be
-                          // small. Otherwise, the stepper will fail to follow the reference current
-int max_delay = 650; // If the delay between the two pulses is too long,
-                     // the stepper will fail if the timing at that time is small.
-                     // Therefore, the timing of the stepper must be reset to initial timing
+
 
 unsigned long start_time = 0; 
 unsigned long run_time = 0;
@@ -57,31 +54,26 @@ void loop() {
   dt = micros() - start_time;
   
   if ( dt > delay_micros) {
+    start_time = micros();
+    
     if ( dt > max_delay ) { 
       // If the delay between the two pulses is too long,
       // the timing will be reset to the initial timing  
       delay_micros = initial;
     } 
 
-    start_time = micros();
     if (move_) { // If the stepper state is MOVING
       digitalWrite(PUL, step_logic);
       step_logic = !step_logic; // Update the step logic
 
       // Accelerating the stepper motor
-      if (delay_micros > limit_3) {
-        if (delay_micros > limit_1) {
-          delay_micros += increment_1;
-        }
-        else if (delay_micros > limit_2) {
-          delay_micros += increment_2;
-        }
-        else {
-          delay_micros += increment_3;
+      for (int i=0; i < N; i++){
+        if (delay_micros > limit[i]){
+          delay_micros += increment[i];
+          break;
         }
       }
     }
-    
   }
 }
 
