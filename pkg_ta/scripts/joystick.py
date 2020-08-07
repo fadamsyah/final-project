@@ -7,6 +7,10 @@ from pkg_ta.msg import Control
 pygame.init()
 pygame.joystick.init()
 
+max_steer = 28
+min_steer = -35
+max_brake = 2.
+
 # Joystick ROS
 def main():
     # Initialite node and topic
@@ -22,8 +26,11 @@ def main():
         # Main code
         pygame.event.get()
         jsInputs = [float(js.get_axis(i)) for i in range(js.get_numaxes())]
-        jsteer = jsInputs[3] * 35.0 # maximum steering angle (degree)
-        jsteer = min(jsteer, 28.0)
+        jsteer = jsInputs[3]
+        if jsteer > 0:
+            jsteer = jsteer * max_steer
+        else:
+            jsteer = jsteer * min_steer
         jt = -jsInputs[1]
 
         if abs(jsteer) < 0.001:
@@ -35,7 +42,7 @@ def main():
         msg = Control()
         msg.steer = jsteer
         msg.throttle = max(0, jt)
-        msg.brake = max(0, -jt*1.55)
+        msg.brake = max(0, -jt*max_brake)
         #rospy.loginfo(msg)
         pub.publish(msg)
         rate.sleep()
