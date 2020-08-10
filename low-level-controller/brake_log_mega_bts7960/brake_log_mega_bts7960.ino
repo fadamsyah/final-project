@@ -67,7 +67,7 @@ pkg_ta::LogArduino pub_msg;
 ros::Publisher pub("logging_brake", &pub_msg);
 
 void receive_message(const pkg_ta::Control& sub_msg) {
-  braking_setpoint = min(max(sub_msg.brake, min_brake), max_brake);
+  braking_setpoint = min(max(sub_msg.action_brake, min_brake), max_brake);
   pub_msg.brake_setpoint = braking_setpoint;
 }
 

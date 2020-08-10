@@ -109,13 +109,13 @@ pkg_ta::LogArduino pub_msg;
 ros::Publisher pub("logging_arduino", &pub_msg);
 
 void receive_message(const pkg_ta::Control& sub_msg) {
-  steering_setpoint = min(max(sub_msg.steer, min_steer), max_steer);
+  steering_setpoint = min(max(sub_msg.action_steer, min_steer), max_steer);
   pub_msg.steering_setpoint = steering_setpoint;
 
-  braking_setpoint = min(max(sub_msg.brake, min_brake), max_brake);
+  braking_setpoint = min(max(sub_msg.action_brake, min_brake), max_brake);
   pub_msg.brake_setpoint = braking_setpoint;
 
-  throttle_setpoint = min(max(sub_msg.throttle, 0), 1);
+  throttle_setpoint = min(max(sub_msg.action_throttle, 0), 1);
 }
 
 ros::Subscriber<pkg_ta::Control> sub("control_signal", &receive_message );
@@ -310,7 +310,7 @@ void process_throttling(){
   throttle_voltage = floor(throttle_setpoint * 0.6 * 4095); // Voltage max = 60% dari 4096
   
   // ENABLE
-  if(throttle_voltage>0){ //perlu cari deadband throttle
+  if(throttle_voltage > 0){ //perlu cari deadband throttle
     digitalWrite(THROTTLE_ENA, HIGH);
   } else {
     digitalWrite(THROTTLE_ENA, LOW);
