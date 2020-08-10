@@ -32,6 +32,7 @@ def main():
     
     long = 0.
     lat = 0.    
+    coeff = 0.1
 
     while not rospy.is_shutdown():
         # Main code
@@ -43,24 +44,30 @@ def main():
         if np.abs(jsInputs[1]) < 0.01:
             jsInputs[1] = 0.
             
-        long = 0.9 * long + 0.1 * (-jsInputs[1])
-        if long >= 0.:
-            long = long * max_throttle
+        long = (1.0 - coeff) * long + coeff * (-jsInputs[1])
+        if np.abs(long) > 0.01:
+            if long >= 0.:
+                lon = long * np.abs(max_throttle)
+            else:
+                lon = long * np.abs(max_brake)
         else:
-            long = long * max_brake
+            lon = 0.0
             
-        lat = 0.9 * lat + 0.1 * jsInputs[3]
-        if lat >= 0.:
-            lat = lat * max_steer
+        lat = (1.0 - coeff) * lat + coeff * jsInputs[3]
+        if np.abs(lat) > 0.01:
+            if lat >= 0.:
+                steer = lat * np.abs(max_steer)
+            else:
+                steer = lat * np.abs(min_steer)
         else:
-            lat = lat * min_steer
+            steer = 0.0
             
         # Send the message
         msg.header.stamp = rospy.Time.now()
         msg.header.seq += 1
-        msg.steer = lat
-        msg.throttle = max(0, long)
-        msg.brake = max(0, -long)
+        msg.steer = steer
+        msg.throttle = max(0, lon)
+        msg.brake = max(0, -lon)
         #rospy.loginfo(msg)
         pub.publish(msg)
         rate.sleep()
