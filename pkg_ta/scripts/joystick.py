@@ -65,9 +65,9 @@ def main():
         # Send the message
         msg.header.stamp = rospy.Time.now()
         msg.header.seq += 1
-        msg.steer = steer
-        msg.throttle = max(0, lon)
-        msg.brake = max(0, -lon)
+        msg.action_steer = steer
+        msg.action_throttle = max(0, lon)
+        msg.action_brake = max(0, -lon)
         #rospy.loginfo(msg)
         pub.publish(msg)
         rate.sleep()
