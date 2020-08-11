@@ -16,7 +16,7 @@ def main():
     # Define the saturation value of the actuator, i.e. steer, brake, and throttle
     max_steer = 28.
     min_steer = -35.
-    max_brake = 2.
+    max_brake = 3.
     max_throttle = 1.
     
     # Initialite node and topic
@@ -31,8 +31,9 @@ def main():
     msg.header.stamp = rospy.Time.now()
     
     long = 0.
-    lat = 0.    
-    coeff = 0.1
+    lat = 0.
+    coeff_long = 0.1
+    coeff_lat = 0.1
 
     while not rospy.is_shutdown():
         # Main code
@@ -44,7 +45,7 @@ def main():
         if np.abs(jsInputs[1]) < 0.01:
             jsInputs[1] = 0.
             
-        long = (1.0 - coeff) * long + coeff * (-jsInputs[1])
+        long = (1.0 - coeff_long) * long + coeff_long * (-jsInputs[1])
         if np.abs(long) > 0.01:
             if long >= 0.:
                 lon = long * np.abs(max_throttle)
@@ -53,7 +54,7 @@ def main():
         else:
             lon = 0.0
             
-        lat = (1.0 - coeff) * lat + coeff * jsInputs[3]
+        lat = (1.0 - coeff_lat) * lat + coeff_lat * jsInputs[3]
         if np.abs(lat) > 0.01:
             if lat >= 0.:
                 steer = lat * np.abs(max_steer)
