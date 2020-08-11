@@ -53,7 +53,7 @@ int ENCODER[ ] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11}; // Absolute Encoder Pin
 #define R_IS A2
 #define L_IS A3
 #define THROTTLE_ENA A4
-#define res_val 660.0f // Ohm (Value of The Resistor)
+#define res_val 680.0f // Ohm (Value of The Resistor)
 #define current_gain (8500.0f*4.95f/1023.0f/res_val);
 /******************************************************************/
 
@@ -87,7 +87,7 @@ String steering_state = "STOP";
 float braking_setpoint = 0; // cm
 float braking_position = 0; // cm
 float braking_delta_min_move = 0.025; // cm (must be less than stay)
-float braking_delta_min_stay = 0.051; // cm (must be greater than move)
+float braking_delta_min_stay = 0.100; // cm (must be greater than move)
 float braking_zero_offset = 0.0f;
 bool braking_moving = false;
 String braking_state = "STOP"; // STOP | PULL | RELEASE
@@ -95,7 +95,8 @@ String braking_state = "STOP"; // STOP | PULL | RELEASE
 #define min_brake 0.0f
 #define breaking_gradient 0.01012f
 #define breaking_bias 0.0f
-#define bf_coeff 0.75f
+//#define bf_coeff 0.75f
+#define bf_coeff 0.f
 /***************************************************/
 
 /************* THROTTLE GLOBAL VARIABLE *************/
@@ -223,16 +224,15 @@ void process_steering() {
     s2 = LOW;
   }
   
-  if ( (s1 != s1_prev) || (s2 != s2_prev) ) {
-    digitalWrite(S1, s1);
-    digitalWrite(S2, s2);
-    delayMicroseconds(10);
-    digitalWrite(TRIGGER, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIGGER, LOW);
-    s1_prev = s1;
-    s2_prev = s2;
-  }
+  //if ( (s1 != s1_prev) || (s2 != s2_prev) ) {
+  digitalWrite(S1, s1);
+  digitalWrite(S2, s2);
+  delayMicroseconds(10);
+  digitalWrite(TRIGGER, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIGGER, LOW);
+  s1_prev = s1;
+  s2_prev = s2;
 
   //steering_state.toCharArray(pub_msg.steering_state, steering_state.length());
 }

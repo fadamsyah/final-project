@@ -5,8 +5,8 @@
   DIR HIGH --> Counter Clockwise (KIRI)
 */
 
-#define PUL  3 // Pulse pin
-#define DIR  4 // Direction pin
+#define PUL  4 // Pulse pin
+#define DIR  3 // Direction pin
 #define ENA  5 // Enable pin
 #define S1  6 // Direction Pin
 #define S2  7 // Direction Pin
@@ -15,10 +15,10 @@
 #define max_delay  650 // If the delay between the two pulses is too long,
                        // the stepper will fail if the timing at that time is small.
                        // Therefore, the timing of the stepper must be reset to initial timing
-#define N 3
-const int limit[N] = {450, 200, 150}; // Microsecond || The limit of the stepper's timing of the first, second, & third acceleration
+#define N 5
+const int limit[N] = {450, 300, 200, 150, 100}; // Microsecond || The limit of the stepper's timing of the first, second, & third acceleration
                                       // i.e. the MINIMUM timing of the stepper motor
-const float increment[N] = {-1.0f, -3.0f, -0.5f}; // At the begining, the required torque is large because of the friction force acting to the tire
+const float increment[N] = {-1.0f, -0.25f, -0.5f, -0.25f, 0.05f}; // At the begining, the required torque is large because of the friction force acting to the tire
                                                   // Therefore, the acceleration must be small in the begining of the movement of the stepper motor
                                                   // When the timing is low, i.e. the movement of the stepper is extremely fast, the acceleration must be
                                                   // small. Otherwise, the stepper will fail to follow the reference current                          
