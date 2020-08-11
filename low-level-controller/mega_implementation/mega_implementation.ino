@@ -69,7 +69,9 @@ unsigned long ros_time = 0; // Milisecond
 /************* STEERING GLOBAL VARIABLE *************/
 float steering_angle = 0; // Degree
 float steering_setpoint = 0;
-float steering_delta_min = 0.2;
+float steering_delta_min_move = 0.2; // degree (must be less than stay)
+float steering_delta_min_stay = 0.8; // degree (must be greater than move)
+bool steering_moving = false;
 bool s1 = LOW;
 bool s2 = LOW;
 bool s1_prev = HIGH;
@@ -207,18 +209,26 @@ void process_steering() {
 
   pub_msg.steering_delta = delta_steer;
 
-  if(abs(delta_steer) > steering_delta_min){
-    if (delta_steer > 0) { // KANAN (CW)
+  if (!steering_moving && abs(delta_steer) >= steering_delta_min_stay){
+    steering_moving = true;
+  }
+  else if (steering_moving && abs(delta_steer) <= steering_delta_min_move){
+    steering_moving = false;
+  }
+
+  if(steering_moving){
+    if (delta_steer >= 0) { // KANAN (CW)
       steering_state = "CW";
       s1 = HIGH;
       s2 = LOW;
     }
-    else if (delta_steer < 0) { // KIRI (CCW)
+    else{ // KIRI (CCW)
       steering_state = "CCW";
       s1 = LOW;
       s2 = HIGH;
     }
-  } else {
+  }
+  else{
     steering_state = "STOP";
     s1 = LOW;
     s2 = LOW;
