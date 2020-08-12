@@ -15,13 +15,14 @@
 #define max_delay  650 // If the delay between the two pulses is too long,
                        // the stepper will fail if the timing at that time is small.
                        // Therefore, the timing of the stepper must be reset to initial timing
-#define N 5
-const int limit[N] = {450, 300, 200, 150, 100}; // Microsecond || The limit of the stepper's timing of the first, second, & third acceleration
-                                      // i.e. the MINIMUM timing of the stepper motor
-const float increment[N] = {-1.0f, -0.25f, -0.5f, -0.25f, 0.05f}; // At the begining, the required torque is large because of the friction force acting to the tire
+#define N 6
+const int limit[N] = {450, 350, 250, 200, 150, 125}; // Microsecond || The limit of the stepper's timing of the first, second, & third acceleration
+                                                     // i.e. the MINIMUM timing of the stepper motor
+const float increment[N] = {-1.f, -0.25f, -0.05f, -0.1f, -0.2f, -0.05f}; // At the begining, the required torque is large because of the friction force acting to the tire
                                                   // Therefore, the acceleration must be small in the begining of the movement of the stepper motor
                                                   // When the timing is low, i.e. the movement of the stepper is extremely fast, the acceleration must be
                                                   // small. Otherwise, the stepper will fail to follow the reference current                          
+
 float delay_micros = initial; // Mikrosekon || The instantaneous timing of the stepper motor
 
 
@@ -46,8 +47,7 @@ void setup() {
   digitalWrite(ENA, LOW); // Turn ON the stepper motor
   digitalWrite(DIR, dir); // Set the direction of the movement (for initialization)
 
-  attachInterrupt(digitalPinToInterrupt(2), interrupt, RISING); // Set the interrupt pin to detect whether
-                                                                // there is a signal from the Arduino Mega or not
+  attachInterrupt(digitalPinToInterrupt(2), interrupt, RISING); // Set the interrupt pin to detect whether                                                               // there is a signal from the Arduino Mega or not
 }
 
 void loop() {

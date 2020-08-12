@@ -69,7 +69,7 @@ unsigned long ros_time = 0; // Milisecond
 /************* STEERING GLOBAL VARIABLE *************/
 float steering_angle = 0; // Degree
 float steering_setpoint = 0;
-float steering_delta_min_move = 0.2; // degree (must be less than stay)
+float steering_delta_min_move = 0.3; // degree (must be less than stay)
 float steering_delta_min_stay = 0.8; // degree (must be greater than move)
 bool steering_moving = false;
 bool s1 = LOW;
