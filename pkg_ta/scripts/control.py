@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
+import ...
 import rospy
 from pkg_ta.msg import Control
-from ... import Odometry
 
 max_steer = 28.; min_steer = -35.
 max_brake = 2.; max_throttle = 1.
@@ -12,7 +12,10 @@ ff_long = np.array([..., ...])
 sat_long = np.array([-max_brake, max_throttle])
 sat_lat = np.array([min_steer, max_steer])
 
+
+
 state = {'x': 0., 'y': 0., 'yaw': 0., 'v': 0.}
+
 
 def main():
     controller = Controller_v1(kp, ki, kd, ff_long, sat_long,
@@ -20,6 +23,7 @@ def main():
                            waypoints_np)
 
     def callback(data):
+        #rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
         global state
         state['x'] = ...
         state['y'] = ...
