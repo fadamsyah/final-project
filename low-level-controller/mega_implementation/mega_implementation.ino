@@ -104,6 +104,8 @@ String braking_state = "STOP"; // STOP | PULL | RELEASE
 /************* THROTTLE GLOBAL VARIABLE *************/
 float throttle_setpoint = 0; // 0-1
 float throttle_voltage = 0; // 0-4095
+float throttle_value = 0;
+float throttle_increment = float(update_steering_period) * 4.0f / 1000.0f * 4095.0f; // 0 -> Max ~ Needs 2 seconds
 Adafruit_MCP4725 dac;
 /***************************************************/
 
@@ -317,17 +319,34 @@ void process_braking(){
 }
 
 void process_throttling(){
-  throttle_voltage = floor(throttle_setpoint * 0.6 * 4095); // Voltage max = 60% dari 4096
+  // throttle_voltage = set point
+  // throttle_value = actual voltage sent
+  // throttle_increment = increment per period
+  
+  throttle_voltage = floor(throttle_setpoint * 4095); // Voltage max = 60% dari 4096
+
+  // add jerk
+  if (throttle_voltage >= throttle_value) {
+    if ((throttle_voltage - throttle_value) < throttle_increment){
+      throttle_value = throttle_voltage;
+    }
+    else {
+      throttle_value += throttle_increment;
+    }
+  }
+  else {
+    throttle_value = throttle_voltage;
+  }
   
   // ENABLE
-  if(throttle_voltage > 0){ //perlu cari deadband throttle
+  if(throttle_voltage > 0 || throttle_value > 0){ //perlu cari deadband throttle
     digitalWrite(THROTTLE_ENA, HIGH);
   } else {
     digitalWrite(THROTTLE_ENA, LOW);
   }
 
   // SPEED COMMAND
-  dac.setVoltage(throttle_voltage, false);
+  dac.setVoltage(floor(throttle_value), false);
   
-  pub_msg.throttle_voltage = throttle_voltage;
+  pub_msg.throttle_voltage = throttle_value;
 }
