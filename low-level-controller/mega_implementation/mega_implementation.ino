@@ -274,6 +274,7 @@ void sensing_braking_current(){
 
 void process_braking(){
   int pwm = 0;
+  int sign = 1;
   
   float delta_brake = braking_setpoint - braking_position;
   pub_msg.brake_delta = delta_brake;
@@ -297,11 +298,13 @@ void process_braking(){
 
     if(delta_brake >= 0){
       braking_state = "PULL";
+      sign = 1;
       analogWrite(LPWM, 0);
       analogWrite(RPWM, pwm);
     }
     else{
       braking_state = "RELEASE";
+      sign = -1;
       analogWrite(RPWM, 0);
       analogWrite(LPWM, pwm);
     }
@@ -314,7 +317,7 @@ void process_braking(){
     analogWrite(LPWM, 0);
   }
   
-  pub_msg.brake_pwm = pwm;
+  pub_msg.brake_pwm = pwm * sign;
   //braking_state.toCharArray(pub_msg.brake_state, braking_state.length());
 }
 
