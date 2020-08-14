@@ -17,7 +17,7 @@ def main():
     max_steer = 28.
     min_steer = -35.
     max_brake = 3.
-    max_throttle = 0.2
+    max_throttle = 0.6
     
     # Initialite node and topic
     rospy.init_node('joystick')
