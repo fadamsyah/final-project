@@ -82,7 +82,7 @@ def main():
     rate = rospy.Rate(freq) # Hz
           
     print("Menunggu data GPS masuk pertama kali !")
-    while !RUN:
+    while not RUN:
         pass # INI DI WHILE KALAU DATA GPS BELUM MASUK BUAT INISIALISASI
     print("Data GPS sudah masuk !")
     print("Program sudah berjalan !")
