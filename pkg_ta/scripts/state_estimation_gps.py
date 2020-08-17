@@ -14,6 +14,7 @@ lat0, lon0, h0 = -6.8712, 107.5738, 768
 var_gps_pos =  0.5 **2
 var_gps_speed = 1. **2
 var_gps_yaw = 0.25 **2
+var_gps_w = 0.1 **2
 
 Q = np.eye(8)
 Q[:2,:2] = np.eye(2) * 2.**2
@@ -29,7 +30,7 @@ yaw0 = 0.
 w0 = 0.
 P0 = np.eye(8) * 1.
 
-kf = KF_gps(var_gps_pos, var_gps_speed, var_gps_yaw, Q,
+kf = KF_gps(var_gps_pos, var_gps_speed, var_gps_yaw, var_gps_w, Q,
             x0, v0, a0, yaw0, w0, P0)
 
 gps_pos_last = np.array([0., 0.])
@@ -62,8 +63,9 @@ def main():
             _ = kf.correct_velocity(gps_vel)
 
             # Correct Yaw and Omega
-            if np.linalg.norm(gps_vel) <= 1e-2:
-                None # INI BELUM SELESAI, CORRECT OMEGA JADI 0
+            if np.linalg.norm(gps_vel) <= 1e-2: # Treshold-nya perlu dituning
+                # Kalau mobil diam, berarti ga ada perubahan yaw
+                _ = kf.correct_w(0.0)
             else:
                 dpos = kf.x - temp_pos_yaw
                 gps_yaw = np.arctan2(dpos[1], dpos[0])

@@ -2,24 +2,22 @@ import numpy as np
 import numba as nb
 from numba import jitclass, f8
 
-# BELUM DIPAKEIN NUMBA
-# CORRECT OMEGA BELUM
-# BELUM PREDIKSI ANGULAR ACCELERATION (GATAU PERLU APA NGGA)
 # BELUM NAMBAHIN RESET STATE DAN COVARIANCE MATRIX
 
-spec = [('cov_gps_pos', f8[:,:]), ('cov_gps_vel', f8[:,:]), ('cov_gps_yaw', f8),
-        ('H_pos', f8[:,:]), ('H_vel', f8[:,:]), ('H_yaw', f8[:,:]), ('Q', f8[:,:]),
+spec = [('cov_gps_pos', f8[:,:]), ('cov_gps_vel', f8[:,:]), ('cov_gps_yaw', f8), ('cov_gps_w', f8),
+        ('H_pos', f8[:,:]), ('H_vel', f8[:,:]), ('H_yaw', f8[:,:]), ('H_w', f8[:,:]),('Q', f8[:,:]),
         ('x', f8[:]), ('v', f8[:]), ('a', f8[:]), ('yaw', f8), ('w', f8), ('P', f8[:,:])]
 
 @jitclass(spec)
 class KF_gps(object):
-    def __init__(self, var_gps_pos, var_gps_speed, var_gps_yaw, Q,
-                x0, v0, a0, yaw0, w0, P0):
+    def __init__(self, var_gps_pos, var_gps_speed, var_gps_yaw, var_gps_w,
+                 Q, x0, v0, a0, yaw0, w0, P0):
         # Measurement Covariance Matrix
         self.cov_gps_pos = np.array([[1,0],
                                      [0,1]]) * var_gps_pos
         self.cov_gps_vel = np.eye(2) * var_gps_speed
         self.cov_gps_yaw = var_gps_yaw
+        self.cov_gps_w = var_gps_w
         
         # Measurement Jacobian Matrix
         self.H_pos = np.zeros((2,8))
@@ -28,6 +26,8 @@ class KF_gps(object):
         self.H_vel[:2,2:4] = np.eye(2)
         self.H_yaw = np.zeros((1,8))
         self.H_yaw[0, -2] = 1
+        self.H_w = np.zeros((1,8))
+        self.H_w[0, -1] = 1
         
         # Process Noise Covariance Matrix
         self.Q = Q
@@ -106,11 +106,26 @@ class KF_gps(object):
         self.P = (np.eye(8) - K @ H) @ self.P
         return self.x, self.v, self.a, self.yaw, self.w, self.P
     
+    def correct_w(self, z):
+        H = self.H_w
+        K = self.P @ H.T @ np.linalg.inv(H @ self.P @H.T + self.cov_gps_w)
+        inno = np.array([z - self.w])
+        
+        self.x = self.x + K[:2] @ inno
+        self.v = self.v + K[2:4] @ inno
+        self.a = self.a + K[4:6] @ inno
+        self.yaw = self.wrap_angle(self.yaw + K[6] @ inno)
+        self.w = self.w + K[7] @ inno
+        
+        self.P = (np.eye(8) - K @ H) @ self.P
+        return self.x, self.v, self.a, self.yaw, self.w, self.P
+    
 print("Compilling the KF_gps class. Please wait ...")
-kf = KF_gps(0.1, 0.1, 0.1, np.eye(8, dtype=float),
+kf = KF_gps(0.1, 0.1, 0.1, 0.05, np.eye(8, dtype=float),
            np.array([0.1,0.1]), np.array([0.1,0.1]), np.array([0.1,0.1]), 0.3, 0.2, np.eye(8, dtype=float))
 _ = kf.predict(0.01)
 _ = kf.correct_position(np.array([1., 1.]))
 _ = kf.correct_velocity(np.array([1., 1.]))
 _ = kf.correct_yaw(0.2)
+_ = kf.correct_w(0.0)
 print("The KF_gps class has been compiled !")
