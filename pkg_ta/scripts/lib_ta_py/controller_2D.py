@@ -44,8 +44,8 @@ class Controller_v1(object):
         self._kv = kv
         self._l = length
         self._dead_band = lateral_dead_band
-        self._sat_lat_max = max(sat_lat[0], sat_long[1])
-        self._sat_lat_min = min(sat_lat[0], sat_long[1])
+        self._sat_lat_max = np.fmax(sat_lat[0], sat_lat[1])
+        self._sat_lat_min = np.fmin(sat_lat[0], sat_lat[1])
         self._e_lat = 0.
         self._e_yaw = 0.
 
@@ -102,12 +102,16 @@ class Controller_v1(object):
             return 0.
         else:
             return self._ff_params[0] * (1. - np.exp(- self._ff_params[1] * v))
-
+    '''
     def _feed_forward_lateral(self):
         temp = self._l * self._waypoints[self._closest_idx, -1]
         if np.abs(temp) > 1.:
             temp = np.sign(temp)
-        return np.arcsin(temp) # From -pi/2 to pi/2
+        return np.fmax(np.fmin(np.arcsin(temp), self._sat_lat_max), self._sat_lat_min) # From -pi/2 to pi/2
+    '''
+    def _feed_forward_lateral(self):
+        temp = self._l * self._waypoints[self._closest_idx, -1]
+        return np.fmax(np.fmin(np.arctan(temp), self._sat_lat_max), self._sat_lat_min) # From -pi/2 to pi/2
 
     def calculate_control_signal(self, dt, x, y, v, yaw):
         # Waypoints (n, 5) -> x, y, yaw, v, curvature
@@ -132,15 +136,17 @@ class Controller_v1(object):
         self._ev_last = self._ev
 
         # Lateral control
-        temp = 0.0
-        if np.abs(self._e_lat) > self._dead_band:
-            temp = self._e_lat
+        #temp = 0.0
+        #if np.abs(self._e_lat) > self._dead_band:
+        #    temp = self._e_lat
 
-        cs_lat = self._feed_forward_lateral() +\
-                    self._e_yaw +\
-                    np.arctan(self._ks * temp / (self._kv + v))
-        cs_lat = (cs_lat + np.pi) % (2 * np.pi) - np.pi
-        cs_lat = np.fmax(np.fmin(cs_lat, self._sat_lat_max), self._sat_lat_min)
+        a = self._feed_forward_lateral()
+        b = self._e_yaw
+        #c = np.arctan(self._ks * temp / (self._kv + v))
+        c = np.arctan(self._ks * self._e_lat / (self._kv + v))
+        d = a + b + c
+
+        cs_lat = max(min(d, self._sat_lat_max), self._sat_lat_min)
 
         return cs_long, cs_lat
 
@@ -195,8 +201,8 @@ class Controller_v2(object):
         self._kv = kv
         self._l = length
         self._dead_band = lateral_dead_band
-        self._sat_lat_max = max(sat_lat[0], sat_long[1])
-        self._sat_lat_min = min(sat_lat[0], sat_long[1])
+        self._sat_lat_max = max(sat_lat[0], sat_lat[1])
+        self._sat_lat_min = min(sat_lat[0], sat_lat[1])
         self._e_lat = 0.
         self._e_yaw = 0.
 
@@ -258,7 +264,7 @@ class Controller_v2(object):
         temp = self._l * self._waypoints[self._closest_idx, -1]
         if np.abs(temp) > 1.:
             temp = np.sign(temp)
-        return np.arcsin(temp) # From -pi/2 to pi/2
+        return np.fmax(np.fmin(np.arcsin(temp), self._sat_lat_max), self._sat_lat_min) # From -pi/2 to pi/2
 
     def calculate_control_signal(self, dt, x, y, v, yaw):
         # Waypoints (n, 5) -> x, y, yaw, v, curvature

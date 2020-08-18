@@ -1,7 +1,7 @@
 import numpy as np
 import rospy
 import pymap3d as pm
-from kf_gps import KF_gps
+from lib_ta_py.kf_gps import KF_gps
 from sensor_msgs.msg import NavSatFix
 from pkg_ta.msg import State
 
@@ -12,14 +12,14 @@ lat0, lon0, h0 = -6.8712, 107.5738, 768
 
 # Make the kf class
 var_gps_pos =  0.5 **2
-var_gps_speed = 1. **2
+var_gps_speed = .75 **2
 var_gps_yaw = 0.25 **2
 var_gps_w = 0.1 **2
 
 Q = np.eye(8)
-Q[:2,:2] = np.eye(2) * 2.**2
-Q[2:4,2:4] = np.eye(2) * 2.**2
-Q[4:6,4:6] = np.eye(2) * 0.05**2
+Q[:2,:2] = np.eye(2) * 3.**2
+Q[2:4,2:4] = np.eye(2) * 3.**2
+Q[4:6,4:6] = np.eye(2) * 0.1**2
 Q[6,6] = 1.**2
 Q[7,7] = 0.1**2
 
@@ -63,7 +63,7 @@ def main():
             _ = kf.correct_velocity(gps_vel)
 
             # Correct Yaw and Omega
-            if np.linalg.norm(gps_vel) <= 1e-2: # Treshold-nya perlu dituning
+            if np.linalg.norm(gps_vel) <= 2e-1: # Treshold-nya perlu dituning
                 # Kalau mobil diam, berarti ga ada perubahan yaw
                 _ = kf.correct_w(0.0)
             else:
