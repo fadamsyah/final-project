@@ -26,7 +26,7 @@ Q[7,7] = 0.1**2
 x0 = np.array([0., 0.])
 v0 = np.array([0., 0.])
 a0 = np.array([0., 0.])
-yaw0 = 0.
+yaw0 = 1.520187070545067 # INI JANGAN LUPA DIGANTI
 w0 = 0.
 P0 = np.eye(8) * 1.
 

@@ -4,16 +4,17 @@ import numba as nb
 from lib_ta_py.controller_2D import Controller_v1
 import rospy
 from pkg_ta.msg import Control
-from pkg_ta.msg import State
+from nav_msgs.msg import Odometry
+from sensor_msgs.msg import Imu
 
 freq = 10 # Hz
-waypoints_np = np.load('waypoints/WAYPOINTS_I_4.npy')
+waypoints_np = np.load(.............)
 
 # In the Arduino, CW is positive and CCW is negative
 # On the other hand, in the controller algoritm, CCW is positive and CW is negative
 max_steer = 35.; min_steer = -28. # For the path following control algoritm ~ degree
 max_steer_arduino = 28.; min_steer_arduino = -35. # For the Arduino ~ degree
-max_brake = 2.9; max_throttle = 0.08
+max_brake = 2.9; max_throttle = 0.125
 
 kp = 0.15; ki = 0.075; kd = 0.0
 ff_long = np.array([0.0, 0.0]) # no feed-forward
@@ -23,33 +24,66 @@ sat_lat = sat_lat * np.pi / 180.
 
 state = {'x': 0., 'y': 0., 'yaw': 0., 'v': 0.}
 
-RUN = False # Tunggu sampai data lokalisasi masuk
+RUN_imu = False # Tunggu sampai data yaw masuk
+RUN_utm = False # Tunggu sampai data posisi masuk
+RUN_filtered_map = False # Tunggu sampai data kecepatan masuk
+
+@nb.njit()
+def to_euler(x, y, z, w):
+    """Dari Coursera: Return as xyz (roll pitch yaw) Euler angles."""
+    roll = np.arctan2(2 * (w * x + y * z), 1 - 2 * (x**2 + y**2))
+    pitch = np.arcsin(2 * (w * y - z * x))
+    yaw = np.arctan2(2 * (w * z + x * y), 1 - 2 * (y**2 + z**2))
+    return np.array([roll, pitch, yaw])
+# Compile the to_euler
+_ = to_euler(1.5352300785980803e-15, -1.3393747145983517e-15, -0.7692164172827881, 0.638988343698562)
 
 def main():
     # Create the controller object
     controller = Controller_v1(kp, ki, kd, ff_long, sat_long,
-                           0.4, 1.5, 2.4, 0.01, sat_lat,
+                           2.0, 1.0, 2.3, 0.01, sat_lat,
                            waypoints_np)
-
-    # Create the callback function
-    def callback(data):
+    
+    def callback_utm(msg_utm): # Callback UTM
         global state
-        global RUN
+        global RUN_utm
         
-        state['x'] = data.x
-        state['y'] = data.y
-        state['yaw'] = data.yaw
-        state['v'] = np.sqrt(data.vx**2 + data.vy**2) # m/s
-
-        RUN = True
+        pos = msg_utm.pose.pose.position
+        state['x'] = pos.x
+        state['y'] = pos.y
+        
+        RUN_utm = True
+    
+    def callback_imu(msg_imu): # Callback IMU
+        global state
+        global RUN_imu
+        
+        q = msg_imu.orientation
+        euler = to_euler(q.x, q.y, q.z, q.w)
+        state['yaw'] = euler[-1]
+        
+        RUN_imu = True
+        
+    def callback_filtered_map(msg_fm):
+        global state
+        global RUN_filtered_map
+        
+        vel = msg_fm.twist.twist.linear
+        state['v'] = np.sqrt(vel.x**2 + vel.y**2) # m/s
+        
+        RUN_filtered_map = True
 
     rospy.init_node('control')
-    rospy.Subscriber('/gps_state_estimation', State, callback)
+    rospy.Subscriber('/odometry/utm', Odometry, callback_utm)
+    rospy.Subscriber('/imu', Imu, callback_imu)
+    rospy.Subscriber('/odometry/filtered_map', Odometry, callback_filtered_map)
     pub = rospy.Publisher('/control_signal', Control, queue_size=1)
     rate = rospy.Rate(freq) # Hz
             
-    print("Menunggu data Navigasi masuk pertama kali !")
+    print("Menunggu data posisi, kecepatan, dan yaw masuk pertama kali !")
+    RUN = False
     while not RUN:
+        RUN = RUN_utm and RUN_imu and RUN_filtered_map
         pass # INI DI WHILE KALAU DATA GPS BELUM MASUK BUAT INISIALISASI
     print("Data Navigasi sudah masuk !")
     print("Program sudah berjalan !")
@@ -70,19 +104,6 @@ def main():
         long, lat = controller.calculate_control_signal(delta_t, state['x'],
                                                         state['y'], state['v'],
                                                         state['yaw'])
-        
-        '''
-        print('steering_control: {}'.format(lat*180/np.pi))
-        print('contrib_feedf: {}'.format(a*180/np.pi)) 
-        print('contrib_e_yaw: {}'.format(b*180/np.pi))
-        print('contrib_e_lat: {}'.format(c*180/np.pi))
-        print('ddddddddddddd: {}'.format(d*180/np.pi))
-        print('eeeeeeeeeeeee: {}'.format(e*180/np.pi))
-        print('fffffffffffff: {}'.format(f*180/np.pi))
-        print('ggggggggggggg: {}'.format(g*180/np.pi))
-        print('hhhhhhhhhhhhh: {}'.format(h*180/np.pi))
-        print('iiiiiiiiiiiii: {}'.format(i*180/np.pi))
-        '''
 
         # Get the error profile
         err = controller.get_error()
@@ -92,10 +113,8 @@ def main():
         # Send the message
         msg.header.seq += 1
         msg.action_steer = max(min(-lat*180/np.pi, max_steer_arduino), min_steer_arduino) # lat ~ radian
-        #msg.action_throttle = max(min(long, max_throttle), 0.)
-        msg.action_throttle = max_throttle
+        msg.action_throttle = max(min(long, max_throttle), 0.)
         msg.action_brake = max(min(-long, max_brake), 0.)
-        
         
         msg.error_speed = err[0]
         msg.error_lateral = err[1]
