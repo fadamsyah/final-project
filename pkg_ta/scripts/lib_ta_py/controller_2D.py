@@ -25,7 +25,7 @@ class Controller_v1(object):
                  waypoints):
         # In this version, the integral term will be clamped based on the
         # saturation value and the feed-forward term
-        
+
         # The parameters of the longitudinal controller
         self._kp = kp
         self._ki = ki
@@ -183,7 +183,7 @@ class Controller_v2(object):
                  ks, kv, length, lateral_dead_band, sat_lat,\
                  waypoints):
         # In this version,
-        
+
         # The parameters of the longitudinal controller
         self._kp = kp
         self._ki = ki
@@ -282,12 +282,12 @@ class Controller_v2(object):
         else:
             if self._sat_state != -1:
                 self._ev_sum = self._ev_sum + temp
-        
+
         cs_long = ff_long +\
                     self._kp * self._ev +\
                     self._ki * self._ev_sum +\
                     self._kd * ev_dot
-        
+
         if cs_long > self._sat_long_max:
             cs_long = self._sat_long_max
             self._sat_state = 1
@@ -312,17 +312,17 @@ class Controller_v2(object):
 
         return cs_long, cs_lat
 
-print("Compilling the Controller_v2 ...")
-controller = Controller_v2(0.5, 0.1, 0.1, np.array([1., 2.]),
-                        np.array([-1., 1.]), 2.0, 0.1, 2.5,
-                       0.01, np.array([-np.pi/3., np.pi/3.]),
-                       np.random.randn(100, 5))
-controller.update_waypoints(np.random.randn(100, 5))
-controller.reset_integral_derivative()
-_ = controller.get_error()
-_ = controller.get_instantaneous_setpoint()
-controller._update_error(0., 0., 1.0, 0.)
-_ = controller._feed_forward_longitudinal(2.5)
-_ = controller._feed_forward_lateral()
-_ = controller.calculate_control_signal(0.01, 0., 0., 1.0, 0.)
-print("The Controller_v2 class has been compiled !")
+# print("Compilling the Controller_v2 ...")
+# controller = Controller_v2(0.5, 0.1, 0.1, np.array([1., 2.]),
+#                         np.array([-1., 1.]), 2.0, 0.1, 2.5,
+#                        0.01, np.array([-np.pi/3., np.pi/3.]),
+#                        np.random.randn(100, 5))
+# controller.update_waypoints(np.random.randn(100, 5))
+# controller.reset_integral_derivative()
+# _ = controller.get_error()
+# _ = controller.get_instantaneous_setpoint()
+# controller._update_error(0., 0., 1.0, 0.)
+# _ = controller._feed_forward_longitudinal(2.5)
+# _ = controller._feed_forward_lateral()
+# _ = controller.calculate_control_signal(0.01, 0., 0., 1.0, 0.)
+# print("The Controller_v2 class has been compiled !")

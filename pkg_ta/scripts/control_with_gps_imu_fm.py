@@ -1,31 +1,37 @@
 import numpy as np
-import pandas as pd
 import numba as nb
+import pymap3d as pm
 from lib_ta_py.controller_2D import Controller_v1
 import rospy
 from pkg_ta.msg import Control
-from nav_msgs.msg import Odometry
+from sensor_msgs.msg import NavSatFix
 from sensor_msgs.msg import Imu
+from nav_msgs.msg import Odometry
 
-freq = 10 # Hz
-waypoints_np = np.load(.............)
+freq = 20 # Hz
+waypoints_np = np.load('waypoints/waypoints/wp_24_agus_2.npy')
 
 # In the Arduino, CW is positive and CCW is negative
 # On the other hand, in the controller algoritm, CCW is positive and CW is negative
 max_steer = 35.; min_steer = -28. # For the path following control algoritm ~ degree
 max_steer_arduino = 28.; min_steer_arduino = -35. # For the Arduino ~ degree
-max_brake = 2.9; max_throttle = 0.125
+max_brake = 2.9; max_throttle = 0.125; min_throttle = 0.07
 
 kp = 0.15; ki = 0.075; kd = 0.0
 ff_long = np.array([0.0, 0.0]) # no feed-forward
+ks = 1.25; kv = 2.; kff_lat = 2.5; dead_band_limit = 0.01
+kv_lat = 0.5; kv_yaw = 0.5
 sat_long = np.array([-np.abs(max_brake), np.abs(max_throttle)])
 sat_lat = np.array([-np.abs(min_steer), np.abs(max_steer)])
 sat_lat = sat_lat * np.pi / 180.
 
+# Reference point
+lat0, lon0, h0 = -6.8712, 107.5738, 768
+
 state = {'x': 0., 'y': 0., 'yaw': 0., 'v': 0.}
 
 RUN_imu = False # Tunggu sampai data yaw masuk
-RUN_utm = False # Tunggu sampai data posisi masuk
+RUN_gps = False # Tunggu sampai data posisi masuk
 RUN_filtered_map = False # Tunggu sampai data kecepatan masuk
 
 @nb.njit()
@@ -39,51 +45,53 @@ def to_euler(x, y, z, w):
 _ = to_euler(1.5352300785980803e-15, -1.3393747145983517e-15, -0.7692164172827881, 0.638988343698562)
 
 def main():
-    # Create the controller object
-    controller = Controller_v1(kp, ki, kd, ff_long, sat_long,
-                           2.0, 1.0, 2.3, 0.01, sat_lat,
-                           waypoints_np)
-    
-    def callback_utm(msg_utm): # Callback UTM
+    def callback_gps(msg_gps):
         global state
-        global RUN_utm
-        
-        pos = msg_utm.pose.pose.position
-        state['x'] = pos.x
-        state['y'] = pos.y
-        
-        RUN_utm = True
-    
+        global RUN_gps
+
+        gps_pos = pm.geodetic2enu(msg_gps.latitude,
+                                  msg_gps.longitude,
+                                  msg_gps.altitude, lat0, lon0, h0)
+        state['x'] = gps_pos[0]
+        state['y'] = gps_pos[1]
+
+        RUN_gps = True
+
     def callback_imu(msg_imu): # Callback IMU
         global state
         global RUN_imu
-        
+
         q = msg_imu.orientation
         euler = to_euler(q.x, q.y, q.z, q.w)
         state['yaw'] = euler[-1]
-        
+
         RUN_imu = True
-        
+
     def callback_filtered_map(msg_fm):
         global state
         global RUN_filtered_map
-        
+
         vel = msg_fm.twist.twist.linear
         state['v'] = np.sqrt(vel.x**2 + vel.y**2) # m/s
-        
+
         RUN_filtered_map = True
 
+    # Create the controller object
+    controller = Controller_v1(kp, ki, kd, ff_long, sat_long,
+                               ks, kv, kff_lat, dead_band_limit, sat_lat,
+                               waypoints_np)
+
     rospy.init_node('control')
-    rospy.Subscriber('/odometry/utm', Odometry, callback_utm)
+    rospy.Subscriber('/fix', NavSatFix, callback_gps)
     rospy.Subscriber('/imu', Imu, callback_imu)
     rospy.Subscriber('/odometry/filtered_map', Odometry, callback_filtered_map)
     pub = rospy.Publisher('/control_signal', Control, queue_size=1)
     rate = rospy.Rate(freq) # Hz
-            
-    print("Menunggu data posisi, kecepatan, dan yaw masuk pertama kali !")
+
+    print("Menunggu data gps, imu, dan kecepatan masuk pertama kali ...")
     RUN = False
     while not RUN:
-        RUN = RUN_utm and RUN_imu and RUN_filtered_map
+        RUN = RUN_gps and RUN_imu and RUN_filtered_map
         pass # INI DI WHILE KALAU DATA GPS BELUM MASUK BUAT INISIALISASI
     print("Data Navigasi sudah masuk !")
     print("Program sudah berjalan !")
@@ -99,7 +107,7 @@ def main():
         msg.header.stamp = rospy.Time.now()
         delta_t = msg.header.stamp.to_sec() - last_time
         last_time = msg.header.stamp.to_sec()
-        
+
         # Calculate the control signal
         long, lat = controller.calculate_control_signal(delta_t, state['x'],
                                                         state['y'], state['v'],
@@ -109,22 +117,24 @@ def main():
         err = controller.get_error()
         # Get the reference
         ref = controller.get_instantaneous_setpoint()
-        
+
         # Send the message
         msg.header.seq += 1
         msg.action_steer = max(min(-lat*180/np.pi, max_steer_arduino), min_steer_arduino) # lat ~ radian
-        msg.action_throttle = max(min(long, max_throttle), 0.)
-        msg.action_brake = max(min(-long, max_brake), 0.)
-        
+        lon = max_throttle / (1. + kv_yaw*np.abs(err[2]) + kv_lat*np.abs(err[1]))
+        msg.action_throttle = max(lon, min_throttle)
+        #msg.action_brake = max(min(-long, max_brake), 0.)
+        msg.action_brake = 0.
+
         msg.error_speed = err[0]
         msg.error_lateral = err[1]
-        msg.error_yaw = err[2]        
+        msg.error_yaw = err[2]
 
         msg.actual_x = state['x']
         msg.actual_y = state['y']
         msg.actual_yaw = state['yaw']
         msg.actual_speed = state['v']
-        
+
         msg.wp_idx = controller.get_closest_index()
         msg.ref_x = ref[0]
         msg.ref_y = ref[1]
@@ -134,7 +144,7 @@ def main():
 
         pub.publish(msg)
         rate.sleep()
-        
+
 if __name__ == '__main__':
     try:
         main()
