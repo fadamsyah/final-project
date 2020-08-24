@@ -64,6 +64,9 @@ int ros_period = 20; // Milisekon, 50 Hz
 unsigned long update_steering_time = 0; // Milisecond
 unsigned long update_braking_time = 0; // Microsecond
 unsigned long ros_time = 0; // Milisecond
+int check_stepper_stall_period = 200; // Milisekon, 5 Hz
+int check_stepper_stall_num = check_stepper_stall_period / update_steering_period; // 20 count
+int check_stepper_stall_count = 0;
 /****************************************************/
 
 /************* STEERING GLOBAL VARIABLE *************/
@@ -71,6 +74,8 @@ float steering_angle = 0; // Degree
 float steering_setpoint = 0;
 float steering_delta_min_move = 0.3; // degree (must be less than stay)
 float steering_delta_min_stay = 0.8; // degree (must be greater than move)
+float check_stepper_stall_min_val = 0.2; // degree
+float check_stepper_stall_last_steer_angle = 0.00; // degree
 bool steering_moving = false;
 bool s1 = LOW;
 bool s2 = LOW;
@@ -234,6 +239,36 @@ void process_steering() {
     steering_state = "STOP";
     s1 = LOW;
     s2 = LOW;
+  }
+
+  // Check, whether the stepper motor is stalling or not
+  if (steering_moving){
+    check_stepper_stall_count += 1;
+    if ( (s1 != s1_prev) || (s2 != s2_prev) ){
+      // If the direction is changed, we don't need to pay attention
+      // because the timing will be reset in the Arduino Nano
+      check_stepper_stall_last_steer_angle = steering_angle;
+      check_stepper_stall_count = 0;
+    }
+    else{
+      if (check_stepper_stall_count >= check_stepper_stall_num){ // if the count is equal to num (20)
+        if (abs(steering_angle - check_stepper_stall_last_steer_angle) < check_stepper_stall_min_val){ // STALL !
+          digitalWrite(S1, LOW);
+          digitalWrite(S2, LOW);
+          delayMicroseconds(10);
+          digitalWrite(TRIGGER, HIGH);
+          delayMicroseconds(10);
+          digitalWrite(TRIGGER, LOW);
+          delay(1);
+        }
+        check_stepper_stall_last_steer_angle = steering_angle;
+        check_stepper_stall_count = 0;
+      }
+    }
+  }
+  else{ // If the stepper is not moving, the stepper won't be stalling
+    check_stepper_stall_last_steer_angle = steering_angle;
+    check_stepper_stall_count = 0;
   }
   
   //if ( (s1 != s1_prev) || (s2 != s2_prev) ) {
