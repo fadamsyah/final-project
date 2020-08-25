@@ -15,10 +15,10 @@
 #define max_delay  650 // If the delay between the two pulses is too long,
                        // the stepper will fail if the timing at that time is small.
                        // Therefore, the timing of the stepper must be reset to initial timing
-#define N 3
-const int limit[N] = {450, 200, 150}; // Microsecond || The limit of the stepper's timing of the first, second, & third acceleration
+#define N 5
+const int limit[N] = {450, 200, 150, 125, 100}; // Microsecond || The limit of the stepper's timing of the first, second, & third acceleration
                                                      // i.e. the MINIMUM timing of the stepper motor
-const float increment[N] = {-1.f, -3.f, -0.5f}; // At the begining, the required torque is large because of the friction force acting to the tire
+const float increment[N] = {-1.f, -3.f, -0.5f, -0.1f, -0.025f}; // At the begining, the required torque is large because of the friction force acting to the tire
                                                   // Therefore, the acceleration must be small in the begining of the movement of the stepper motor
                                                   // When the timing is low, i.e. the movement of the stepper is extremely fast, the acceleration must be
                                                   // small. Otherwise, the stepper will fail to follow the reference current                          
@@ -102,6 +102,6 @@ void interrupt()
     prev_dir = dir;
     // step_logic = dir; // I think, this line of code doesn't matter//
     delay_micros = initial;
-    delay(5); // Delay for 5 milisecond
+    delay(1); // Delay for 1 milisecond
   }
 }

@@ -9,18 +9,18 @@ from sensor_msgs.msg import Imu
 from nav_msgs.msg import Odometry
 
 freq = 20 # Hz
-waypoints_np = np.load('waypoints/waypoints/wp_24_agus_2.npy')
+waypoints_np = np.load('waypoints/waypoints/wp_25_agus_belok.npy')
 
 # In the Arduino, CW is positive and CCW is negative
 # On the other hand, in the controller algoritm, CCW is positive and CW is negative
 max_steer = 35.; min_steer = -28. # For the path following control algoritm ~ degree
 max_steer_arduino = 28.; min_steer_arduino = -35. # For the Arduino ~ degree
-max_brake = 2.9; max_throttle = 0.125; min_throttle = 0.07
+max_brake = 2.9; max_throttle = 0.2; min_throttle = 0.08
 
 kp = 0.15; ki = 0.075; kd = 0.0
 ff_long = np.array([0.0, 0.0]) # no feed-forward
-ks = 1.25; kv = 2.; kff_lat = 2.5; dead_band_limit = 0.01
-kv_lat = 0.5; kv_yaw = 0.5
+ks = 0.75; kv = 2.; kff_lat = 2.; dead_band_limit = 0.01
+kv_lat = 0.75; kv_yaw = 0.75
 sat_long = np.array([-np.abs(max_brake), np.abs(max_throttle)])
 sat_lat = np.array([-np.abs(min_steer), np.abs(max_steer)])
 sat_lat = sat_lat * np.pi / 180.
@@ -43,6 +43,7 @@ def to_euler(x, y, z, w):
     return np.array([roll, pitch, yaw])
 # Compile the to_euler
 _ = to_euler(1.5352300785980803e-15, -1.3393747145983517e-15, -0.7692164172827881, 0.638988343698562)
+
 
 def main():
     def callback_gps(msg_gps):
