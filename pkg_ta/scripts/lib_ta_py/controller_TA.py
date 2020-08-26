@@ -18,7 +18,8 @@ spec_v1 = [('_kp', float64), ('_ki', float64), ('_kd', float64), ('_ff_params', 
        ('_sat_lat_min', float64), ('_e_lat', float64), ('_e_yaw', float64),
        ('_waypoints', float64[:, :]), ('_closest_idx', int64),
        ('_max_throttle', float64), ('_min_throttle', float64),
-       ('_kv_yaw', float64), ('_kv_lat', float64), ('_kv_throttle', float64),]
+       ('_kv_yaw', float64), ('_kv_lat', float64), ('_kv_throttle', float64),
+       ('_elat_last', float64),]
 
 @jitclass(spec_v1)
 class Controller_v1(object):
@@ -37,7 +38,6 @@ class Controller_v1(object):
         self._sat_long_max = max(sat_long[0], sat_long[1])
         self._sat_long_min = min(sat_long[0], sat_long[1])
         self._ev = 0.
-        self._ev_last = 0.
         self._ev_sum = 0.
         self._ev_sum_max = 0. # This value will be updated in each iteration
         self._ev_sum_min = 0. # This value will be updated in each iteration
@@ -50,6 +50,7 @@ class Controller_v1(object):
         self._sat_lat_max = np.fmax(sat_lat[0], sat_lat[1])
         self._sat_lat_min = np.fmin(sat_lat[0], sat_lat[1])
         self._e_lat = 0.
+        self._elat_last = 0.
         self._e_yaw = 0.
 
         # Waypoints (n, 5) -> x, y, yaw, v, curvature
@@ -150,7 +151,8 @@ class Controller_v1(object):
         # Throttle Control
         e_lat_abs = np.abs(self._e_lat)
         e_yaw_abs = np.abs(self._e_yaw)
-        cs_long = self._max_throttle / (1. + self._kv_yaw*e_yaw_abs + self._kv_lat*e_lat_abs)
+        # cs_long = self._max_throttle / (1. + self._kv_yaw*e_yaw_abs + self._kv_lat*e_lat_abs)
+        cs_long = self._max_throttle / (1. + self._kv_lat*e_lat_abs)
         cs_long = np.fmax(cs_long, self._min_throttle)
 
         # Lateral control
@@ -159,13 +161,19 @@ class Controller_v1(object):
         #    temp = self._e_lat
 
         a = self._feed_forward_lateral()
-        b = self._e_yaw
+        # b = self._e_yaw * 7.5
+        b = 0.
         # c = np.arctan(self._ks * temp / (self._kv + v))
         # c = np.arctan(self._ks * self._e_lat / (self._kv + v))
-        c = np.arctan(self._ks * self._e_lat / (self._kv + cs_long*self._kv_throttle))
+        # c = np.arctan(self._ks * self._e_lat / (self._kv + cs_long*self._kv_throttle))
+        kpp = 10. * np.pi / 180.
+        kdd = 15. * np.pi / 180.        
+        c = kpp * self._e_lat + kdd * (self._e_lat - self._elat_last)/dt
         d = a + b + c
 
         cs_lat = max(min(d, self._sat_lat_max), self._sat_lat_min)
+
+        self._elat_last = self._e_lat
 
         return cs_long, cs_lat
 
