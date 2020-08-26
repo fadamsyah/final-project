@@ -45,7 +45,7 @@ def main():
         
         q = msg_imu.orientation
         euler = to_euler(q.x, q.y, q.z, q.w)
-        state['yaw'] = euler[-1]
+        state['yaw'] = euler[-1] * (-1)
         
         RUN_imu = True
     
