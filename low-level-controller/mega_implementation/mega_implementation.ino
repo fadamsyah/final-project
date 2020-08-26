@@ -64,8 +64,8 @@ int ros_period = 20; // Milisekon, 50 Hz
 unsigned long update_steering_time = 0; // Milisecond
 unsigned long update_braking_time = 0; // Microsecond
 unsigned long ros_time = 0; // Milisecond
-int check_stepper_stall_period = 200; // Milisekon, 5 Hz
-int check_stepper_stall_num = check_stepper_stall_period / update_steering_period; // 20 count
+int check_stepper_stall_period = 150; // Milisekon, 10 Hz
+int check_stepper_stall_num = check_stepper_stall_period / update_steering_period; // 10 count
 int check_stepper_stall_count = 0;
 /****************************************************/
 
@@ -73,8 +73,8 @@ int check_stepper_stall_count = 0;
 float steering_angle = 0; // Degree
 float steering_setpoint = 0;
 float steering_delta_min_move = 0.3; // degree (must be less than stay)
-float steering_delta_min_stay = 0.8; // degree (must be greater than move)
-float check_stepper_stall_min_val = 0.2; // degree
+float steering_delta_min_stay = 0.5; // degree (must be greater than move)
+float check_stepper_stall_min_val = 0.1; // degree
 float check_stepper_stall_last_steer_angle = 0.00; // degree
 bool steering_moving = false;
 bool s1 = LOW;
@@ -251,7 +251,7 @@ void process_steering() {
       check_stepper_stall_count = 0;
     }
     else{
-      if (check_stepper_stall_count >= check_stepper_stall_num){ // if the count is equal to num (20)
+      if (check_stepper_stall_count >= check_stepper_stall_num){ // if the count is equal to num (10)
         if (abs(steering_angle - check_stepper_stall_last_steer_angle) < check_stepper_stall_min_val){ // STALL !
           digitalWrite(S1, LOW);
           digitalWrite(S2, LOW);
