@@ -9,7 +9,7 @@ from sensor_msgs.msg import Imu
 from nav_msgs.msg import Odometry
 
 freq = 20 # Hz
-waypoints_np = np.load('waypoints/waypoints/26_agus_wp_lurus.npy')
+waypoints_np = np.load('waypoints/waypoints/26_agus_wp_S.npy')
 
 # In the Arduino, CW is positive and CCW is negative
 # On the other hand, in the controller algoritm, CCW is positive and CW is negative
@@ -20,7 +20,7 @@ max_brake = 2.9; max_throttle = 0.2; min_throttle = 0.08
 kp = 0.15; ki = 0.075; kd = 0.0
 ff_long = np.array([0.0, 0.0]) # no feed-forward
 ks = 0.75; kv = 2.25; kff_lat = 2.4; dead_band_limit = 0.01
-kv_lat = 1.5; kv_yaw = 1.5; kv_throttle = 10.
+kv_lat = 1.5; kv_yaw = 1.5; kv_throttle = 2.5
 sat_long = np.array([-np.abs(max_brake), np.abs(max_throttle)])
 sat_lat = np.array([-np.abs(min_steer), np.abs(max_steer)])
 sat_lat = sat_lat * np.pi / 180.
@@ -45,10 +45,29 @@ def to_euler(x, y, z, w):
 _ = to_euler(1.5352300785980803e-15, -1.3393747145983517e-15, -0.7692164172827881, 0.638988343698562)
 
 
+last_time = 0.0
 def main():
+    global last_time
+
+    # Create the controller object
+    controller = Controller_v1(kp, ki, kd, ff_long, sat_long,
+                               ks, kv, kff_lat, dead_band_limit, sat_lat,
+                               waypoints_np,
+                               max_throttle, min_throttle,
+                               kv_yaw, kv_lat, kv_throttle)
+
+    rospy.init_node('control')
+
+    msg = Control()
+    msg.header.frame_id = 'path_following_control'
+    msg.header.seq = 0
+    msg.header.stamp = rospy.Time.now()
+    last_time = msg.header.stamp.to_sec() - 1./freq
+
     def callback_gps(msg_gps):
         global state
         global RUN_gps
+        global last_time
 
         gps_pos = pm.geodetic2enu(msg_gps.latitude,
                                   msg_gps.longitude,
@@ -57,6 +76,21 @@ def main():
         state['y'] = gps_pos[1]
 
         RUN_gps = True
+
+        # Calculate the actual sampling time
+        gps_stamp = msg_gps.header.stamp
+        delta_t = gps_stamp.to_sec() - last_time
+        last_time = gps_stamp.to_sec()
+
+        # Calculate the control signal
+        long, lat = controller.calculate_control_signal(delta_t, state['x'],
+                                                        state['y'], state['v'],
+                                                        state['yaw'])
+
+        msg.action_steer = max(min(-lat*180/np.pi, max_steer_arduino), min_steer_arduino) # lat ~ radian
+        #msg.action_throttle = max(min(long, max_throttle), min_throttle)
+        msg.action_throttle = 0.225
+        msg.action_brake = 0.
 
     def callback_imu(msg_imu): # Callback IMU
         global state
@@ -77,14 +111,6 @@ def main():
 
         RUN_filtered_map = True
 
-    # Create the controller object
-    controller = Controller_v1(kp, ki, kd, ff_long, sat_long,
-                               ks, kv, kff_lat, dead_band_limit, sat_lat,
-                               waypoints_np,
-                               max_throttle, min_throttle,
-                               kv_yaw, kv_lat, kv_throttle)
-
-    rospy.init_node('control')
     rospy.Subscriber('/fix', NavSatFix, callback_gps)
     rospy.Subscriber('/imu', Imu, callback_imu)
     rospy.Subscriber('/odometry/filtered_map', Odometry, callback_filtered_map)
@@ -99,22 +125,9 @@ def main():
     print("Data Navigasi sudah masuk !")
     print("Program sudah berjalan !")
 
-    msg = Control()
-    msg.header.frame_id = 'path_following_control'
-    msg.header.seq = 0
-    msg.header.stamp = rospy.Time.now()
-    last_time = msg.header.stamp.to_sec() - 1./freq
-
     while not rospy.is_shutdown():
         # Calculate the actual sampling time
         msg.header.stamp = rospy.Time.now()
-        delta_t = msg.header.stamp.to_sec() - last_time
-        last_time = msg.header.stamp.to_sec()
-
-        # Calculate the control signal
-        long, lat = controller.calculate_control_signal(delta_t, state['x'],
-                                                        state['y'], state['v'],
-                                                        state['yaw'])
 
         # Get the error profile
         err = controller.get_error()
@@ -123,11 +136,6 @@ def main():
 
         # Send the message
         msg.header.seq += 1
-        msg.action_steer = max(min(-lat*180/np.pi, max_steer_arduino), min_steer_arduino) # lat ~ radian
-        msg.action_throttle = max(min(long, max_throttle), min_throttle)
-        #msg.action_brake = max(min(-long, max_brake), 0.)
-        msg.action_brake = 0.
-
         msg.error_speed = err[0]
         msg.error_lateral = err[1]
         msg.error_yaw = err[2]
