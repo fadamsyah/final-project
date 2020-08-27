@@ -19,8 +19,9 @@ max_brake = 2.9; max_throttle = 0.2; min_throttle = 0.08
 
 kp = 0.15; ki = 0.075; kd = 0.0
 ff_long = np.array([0.0, 0.0]) # no feed-forward
-ks = 0.75; kv = 2.25; kff_lat = 2.4; dead_band_limit = 0.01
-kv_lat = 1.5; kv_yaw = 1.5; kv_throttle = 2.5
+ks = 0.75; kv = 2.25; kff_lat = 2.0; dead_band_limit = 0.01
+# kv_lat = 1.5; kv_yaw = 1.5; kv_throttle = 2.5
+kv_lat = 0.0; kv_yaw = 1.5; kv_throttle = 2.5 # UNTUK TUNING PID AJA
 sat_long = np.array([-np.abs(max_brake), np.abs(max_throttle)])
 sat_lat = np.array([-np.abs(min_steer), np.abs(max_steer)])
 sat_lat = sat_lat * np.pi / 180.

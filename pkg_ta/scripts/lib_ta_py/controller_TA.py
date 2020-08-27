@@ -152,7 +152,8 @@ class Controller_v1(object):
         e_lat_abs = np.abs(self._e_lat)
         e_yaw_abs = np.abs(self._e_yaw)
         # cs_long = self._max_throttle / (1. + self._kv_yaw*e_yaw_abs + self._kv_lat*e_lat_abs)
-        cs_long = self._max_throttle / (1. + self._kv_lat*e_lat_abs)
+        # cs_long = self._max_throttle / (1. + self._kv_lat*e_lat_abs)
+        cs_long = self._waypoints[self._closest_idx, 3] / (1. + self._kv_lat*e_lat_abs)
         cs_long = np.fmax(cs_long, self._min_throttle)
 
         # Lateral control
@@ -166,8 +167,8 @@ class Controller_v1(object):
         # c = np.arctan(self._ks * temp / (self._kv + v))
         # c = np.arctan(self._ks * self._e_lat / (self._kv + v))
         # c = np.arctan(self._ks * self._e_lat / (self._kv + cs_long*self._kv_throttle))
-        kpp = 10. * np.pi / 180.
-        kdd = 15. * np.pi / 180.        
+        kpp = 20. * np.pi / 180.
+        kdd = 45. * np.pi / 180.        
         c = kpp * self._e_lat + kdd * (self._e_lat - self._elat_last)/dt
         d = a + b + c
 
