@@ -9,7 +9,7 @@ from sensor_msgs.msg import Imu
 from nav_msgs.msg import Odometry
 
 freq = 20 # Hz
-waypoints_np = np.load('waypoints/waypoints/26_agus_wp_S.npy')
+waypoints_np = np.load('waypoints/waypoints/27_08_lurus.npy')
 
 # In the Arduino, CW is positive and CCW is negative
 # On the other hand, in the controller algoritm, CCW is positive and CW is negative
@@ -89,7 +89,8 @@ def main():
                                                         state['yaw'])
 
         msg.action_steer = max(min(-lat*180/np.pi, max_steer_arduino), min_steer_arduino) # lat ~ radian
-        msg.action_throttle = max(min(long, max_throttle), min_throttle)
+        #msg.action_throttle = max(min(long, max_throttle), min_throttle)
+        msg.action_throttle = max(min(long, max_throttle), 0.0)
         #msg.action_throttle = 0.225
         msg.action_brake = 0.
 
