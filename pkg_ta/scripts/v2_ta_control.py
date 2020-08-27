@@ -89,8 +89,8 @@ def main():
                                                         state['yaw'])
 
         msg.action_steer = max(min(-lat*180/np.pi, max_steer_arduino), min_steer_arduino) # lat ~ radian
-        #msg.action_throttle = max(min(long, max_throttle), min_throttle)
-        msg.action_throttle = 0.225
+        msg.action_throttle = max(min(long, max_throttle), min_throttle)
+        #msg.action_throttle = 0.225
         msg.action_brake = 0.
 
     def callback_imu(msg_imu): # Callback IMU
