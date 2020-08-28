@@ -384,7 +384,10 @@ void process_throttling(){
   }
 
   // SPEED COMMAND
-  dac.setVoltage(floor(throttle_value), false);
   
-  pub_msg.throttle_voltage = throttle_value;
+//  dac.setVoltage(floor(throttle_value), false);
+//  pub_msg.throttle_voltage = throttle_value;
+
+  dac.setVoltage(floor(throttle_voltage), false);
+  pub_msg.throttle_voltage = throttle_voltage;
 }
