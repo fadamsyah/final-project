@@ -53,6 +53,7 @@ add_message_files(
   Brake.msg
   Control.msg
   State.msg
+  State_EKF_2D.msg
   Steering.msg
   LogBrakeCommand.msg
   LogArduino.msg

@@ -9,7 +9,7 @@ from numba.experimental import jitclass
 #########################################################################################
 # VERSION 1
 
-spec_v1 = [('_kp', float64), ('_ki', float64), ('_kd', float64), ('_ff_params', float64[:]),
+spec = [('_kp', float64), ('_ki', float64), ('_kd', float64), ('_ff_params', float64[:]),
            ('_sat_long_max', float64), ('_sat_long_min', float64),
            ('_ev', float64), ('_ev_last', float64), ('_ev_sum', float64),
            ('_ev_sum_max', float64), ('_ev_sum_min', float64),
@@ -22,8 +22,8 @@ spec_v1 = [('_kp', float64), ('_ki', float64), ('_kd', float64), ('_ff_params', 
            ('_elat_last', float64),
            ('_kp_lat', float64), ('_kd_lat', float64),]
 
-@jitclass(spec_v1)
-class Controller_v1(object):
+@jitclass(spec)
+class Controller(object):
     def __init__(self, kp, ki, kd, feed_forward_params, sat_long,\
                  ks, kv, length, lateral_dead_band, sat_lat,\
                  waypoints,\
@@ -182,8 +182,8 @@ class Controller_v1(object):
 
         return cs_long, cs_lat
 
-print("Compilling the Controller_v1 ...")
-controller = Controller_v1(0.5, 0.1, 0.1, np.array([1., 2.]),
+print("Compilling the Controller class ...")
+controller = Controller(0.5, 0.1, 0.1, np.array([1., 2.]),
                            np.array([-1., 1.]), 2.0, 0.1, 2.5,
                            0.01, np.array([-np.pi/3., np.pi/3.]),
                            np.random.randn(100, 5),
@@ -197,5 +197,5 @@ controller._update_error(0., 0., 1.0, 0.)
 _ = controller._feed_forward_longitudinal(2.5)
 _ = controller._feed_forward_lateral()
 _ = controller.calculate_control_signal(0.01, 0., 0., 1.0, 0.)
-print("The Controller_v1 class has been compiled !")
+print("The Controller class has been compiled !")
 #########################################################################################
