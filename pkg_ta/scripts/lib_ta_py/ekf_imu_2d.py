@@ -20,7 +20,7 @@ class imu_ekf_2d(object):
         self.Q = Q
         self.P = P0
         self.yawc = yawc
-        
+
         ############# EDIT HERE
         self.H_gnss = np.zeros((2,11))
         self.H_gnss[:,:2] = np.eye(2)
@@ -41,9 +41,11 @@ class imu_ekf_2d(object):
     def get_cov_sys(self):
         return self.P
     def predict(self, dt, a, w):
-        C = self._yaw_to_rot(self.yaw - self.yawc)
-        C_dot = self._yaw_to_rot_dot(self.yaw - self.yawc)
-        
+        # C = self._yaw_to_rot(self.yaw - self.yawc)
+        # C_dot = self._yaw_to_rot_dot(self.yaw - self.yawc)
+        C = self._yaw_to_rot(self.yaw - (self.bc - np.pi))
+        C_dot = self._yaw_to_rot_dot(self.yaw - (self.bc - np.pi))
+
         self.p = self.p + dt*self.v + dt**2/2 * C@(a - self.ba)
         self.v = self.v + dt* C@(a - self.ba)
         self.yaw = self.yaw + dt*(w - self.bw)
@@ -51,68 +53,89 @@ class imu_ekf_2d(object):
         self.bw = self.bw
         self.bc = self.bc
         self.bg = self.bg
-        
+
+        # F = np.eye(11)
+        # F[:2, 2:4] = np.eye(2) * dt
+        # F[:2, 4] = dt**2/2 * C_dot@(a - self.ba)
+        # F[:2, 5:7] = - dt**2/2 * C
+        # F[2:4, 4] = dt*C_dot@(a - self.ba)
+        # F[2:4, 5:7] = -dt * C
+        # F[4, 7] = -dt
+        #
+        # L = np.zeros((11,9))
+        # L[:2,:2] = dt**2/2 * C
+        # L[:2,3:5] = - dt**2/2 * C
+        # L[2:4,:2] = dt*C
+        # L[2:4,3:5] = -dt*C
+        # L[4,2] = dt
+        # L[4,5] = -dt
+        # L[5:,3:] = np.eye(6)
+
         F = np.eye(11)
         F[:2, 2:4] = np.eye(2) * dt
         F[:2, 4] = dt**2/2 * C_dot@(a - self.ba)
         F[:2, 5:7] = - dt**2/2 * C
+        F[:2, 8] = - dt**2/2 * C_dot@(a - self.ba) #TAMBAHAN
         F[2:4, 4] = dt*C_dot@(a - self.ba)
         F[2:4, 5:7] = -dt * C
+        F[2:4, 8] = - dt*C_dot@(a - self.ba) # TAMBAHAN
         F[4, 7] = -dt
-        
+
         L = np.zeros((11,9))
         L[:2,:2] = dt**2/2 * C
         L[:2,3:5] = - dt**2/2 * C
+        L[:2,6] = - dt**2/2 * C_dot@(a - self.ba) # TAMBAHAN
         L[2:4,:2] = dt*C
         L[2:4,3:5] = -dt*C
+        L[2:4,6] = - dt*C_dot@(a - self.ba) # TAMBAHAN
         L[4,2] = dt
         L[4,5] = -dt
         L[5:,3:] = np.eye(6)
-        
+
         Q = np.copy(self.Q)
         Q[:3,:3] = Q[:3,:3] * dt**2
         Q[3:,3:] = Q[3:,3:] * dt
-        
+
         self.P = F @ self.P @ F.T + L @ Q @ L.T
-    
+
     def _kalman_gain(self, H, J):
         return self.P @ H.T @ np.linalg.inv(H @ self.P @ H.T + J)
-    
+
     def _correct_state_from_inno(self, dx):
         self.p = self.p + dx[:2]
         self.v = self.v + dx[2:4]
         self.yaw = self._wrap_angle(self.yaw + dx[4])
         self.ba = self.ba + dx[5:7]
         self.bw = self.bw + dx[7]
-        self.bc = self.bc + dx[8]
+        self.bc = self._wrap_angle(self.bc + dx[8])
         self.bg = self.bg + dx[9:]
-        
+
     def _correct_cov_sys(self, K, H, J):
         self.P = (np.eye(11) - K @ H) @ self.P @ (np.eye(11) - K @ H).T + K @ J @ K.T
-        
+
     def correct_compass(self, y, J):
         K = self._kalman_gain(self.H_compass, J)
         inno = self._wrap_angle(np.array([y - (self.yaw + self.bc)]))
         dx = np.dot(K, inno)
-        
+
         self._correct_state_from_inno(dx)
         self._correct_cov_sys(K, self.H_compass, J)
-        
+
     def correct_gnss_2d(self, g2d, J):
         K = self._kalman_gain(self.H_gnss, J)
         inno = g2d - (self.p + self.bg)
         dx = np.dot(K, inno)
-        
+
         self._correct_state_from_inno(dx)
         self._correct_cov_sys(K, self.H_gnss, J)
-        
+
 print("Please Wait ...")
 print("The imu_ekf_2d class is being compiled ...")
 
 # COMPILING
 yawc_imu = np.pi/2
 yawc_compass = np.pi*3/2
-        
+
 var_a = 0.5
 var_w = 0.1
 var_ba = 0.5
@@ -130,9 +153,9 @@ Q[7:,7:] = np.eye(2) * var_bg
 
 J_gnss = np.eye(2) * 4.
 J_compass = np.array([[0.075]])
-    
+
 ekf = imu_ekf_2d(np.zeros(2), np.zeros(2), 0.5, np.zeros(2), 0.5, np.zeros((11,11)), 0.5, np.zeros(2), Q, yawc_imu)
-        
+
 _ = ekf._wrap_angle(0.1); _ = ekf._wrap_angle(np.array([0.1]))
 _ = ekf._yaw_to_rot(0.5)
 _ = ekf._yaw_to_rot_dot(0.5)
