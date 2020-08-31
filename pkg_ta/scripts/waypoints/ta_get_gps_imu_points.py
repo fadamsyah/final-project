@@ -50,7 +50,7 @@ def main():
         RUN_imu = True
     
     rospy.init_node('get_gps_imu_points')
-    rospy.Subscriber('/imu', Imu, callback_imu)
+    rospy.Subscriber('/android/imu', Imu, callback_imu)
     rospy.Subscriber('/fix', NavSatFix, callback_gps)
     pub = rospy.Publisher('/get_waypoints', State, queue_size=1)
     rate = rospy.Rate(freq) # Hz
