@@ -11,15 +11,17 @@ waypoints_np = np.load('waypoints/waypoints/31_agus_wp_lurus.npy')
 # waypoints_np = np.load('waypoints/waypoints/31_agus_wp_belok.npy')
 # waypoints_np = np.load('waypoints/waypoints/31_agus_wp_S.npy')
 
+wp_long = np.copy(waypoints_np[:5])
+
 # In the Arduino, CW is positive and CCW is negative
 # On the other hand, in the controller algoritm, CCW is positive and CW is negative
 max_steer = 35.; min_steer = -28. # For the path following control algoritm ~ degree
 max_steer_arduino = 28.; min_steer_arduino = -35. # For the Arduino ~ degree
 max_brake = 2.9; max_throttle = 0.25; min_throttle = 0.0
 
-kp = 0.11; ki = 0.3; kd = 0.015
+kp = 0.11; ki = 0.4; kd = 0.015
 ff_long = np.array([0.0, 0.0]) # no feed-forward
-ks = 1.; kv = 1.0; kff_lat = 1.7; dead_band_limit = 0.025
+ks = 1.5; kv = 1.0; kff_lat = 1.7; dead_band_limit = 0.025
 # kv_lat = 1.5; kv_yaw = 1.5; kv_throttle = 2.5
 kv_lat = 0.0; kv_yaw = 0.0; kv_throttle = 2.5
 kp_lat = 15. * np.pi / 180.
@@ -32,6 +34,7 @@ state = {'x': 0., 'y': 0., 'yaw': 0., 'v': 0.}
 RUN = False
 
 def main():
+    global wp_long
     global RUN
     def callback(msg_nav):
         global state
@@ -40,8 +43,7 @@ def main():
         state['x'] = msg_nav.px
         state['y'] = msg_nav.py
         state['v'] = np.sqrt(msg_nav.vx**2 + msg_nav.vy**2)
-        # state['yaw'] = msg_nav.yaw
-        state['yaw'] = msg_nav.yaw_imu
+        state['yaw'] = msg_nav.yaw
         
         RUN = True
     
@@ -70,12 +72,26 @@ def main():
     msg.header.seq = 0
     msg.header.stamp = rospy.Time.now()
     last_time = msg.header.stamp.to_sec() - 1./freq
-
+    
+    v0 = 0.25 #m/s
+    accel = 0.2
+    vel = np.copy(v0)
+    vmax = 1.5
+    time_init = rospy.get_time()
+    time_dur = 25
+    
     while not rospy.is_shutdown():
         # Calculate the actual sampling time
         msg.header.stamp = rospy.Time.now()
         delta_t = msg.header.stamp.to_sec() - last_time
         last_time = msg.header.stamp.to_sec()
+        
+        if(rospy.get_time() - time_init > (time_dur-(vmax-v0)/accel)): #Decelerate
+            vel = max(min((vel - accel*delta_t) ,vmax),0)
+        else:
+            vel = max(min((vel + accel*delta_t) ,vmax),0)
+        wp_long[:,3] = vel
+        controller.update_waypoints(wp_long)
 
         # Calculate the control signal
         long, lat = controller.calculate_control_signal(delta_t, state['x'],
