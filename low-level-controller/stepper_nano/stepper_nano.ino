@@ -18,7 +18,7 @@
 #define N 5
 const int limit[N] = {450, 200, 150, 125, 100}; // Microsecond || The limit of the stepper's timing of the first, second, & third acceleration
                                                      // i.e. the MINIMUM timing of the stepper motor
-const float increment[N] = {-1.f, -3.f, -0.5f, -0.1f, -0.005f}; // At the begining, the required torque is large because of the friction force acting to the tire
+const float increment[N] = {-1.f, -3.f, -0.5f, -0.05f, -0.005f}; // At the begining, the required torque is large because of the friction force acting to the tire
                                                   // Therefore, the acceleration must be small in the begining of the movement of the stepper motor
                                                   // When the timing is low, i.e. the movement of the stepper is extremely fast, the acceleration must be
                                                   // small. Otherwise, the stepper will fail to follow the reference current                          
