@@ -1,0 +1,5 @@
+STANLEY 1 & 2 --> kp = 0.11; ki = 0.4; kd = 0.015
+STANLEY 1 --> ks = 1.; kv = 2.0; kff_lat = 1.7; dead_band_limit = 0.025
+STANLEY 2 --> ks = 1.; kv = 1.0; kff_lat = 1.7; dead_band_limit = 0.025
+
+

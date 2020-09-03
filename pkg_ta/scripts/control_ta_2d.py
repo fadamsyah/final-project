@@ -1,29 +1,34 @@
 import numpy as np
 import rospy
 import time
+import sys
 from lib_ta_py.controller_2D_TA import Controller
 from pkg_ta.msg import Control
 from pkg_ta.msg import State_EKF_2D
 
 freq = 20 # Hz
-# waypoints_np = np.load('waypoints/waypoints/26_agus_wp_lurus.npy')
-waypoints_np = np.load('waypoints/waypoints/31_agus_wp_lurus.npy')
-# waypoints_np = np.load('waypoints/waypoints/31_agus_wp_belok.npy')
-# waypoints_np = np.load('waypoints/waypoints/31_agus_wp_S.npy')
+# waypoints_np = np.load('waypoints/waypoints/31_agus_wp_lurus.npy')
+# waypoints_np = np.load('waypoints/waypoints/02_09_wp_lurus.npy')
+waypoints_np = np.load('waypoints/waypoints/02_09_wp_S.npy')
+# waypoints_np = np.load('waypoints/waypoints/02_09_wp_belok.npy')
+# waypoints_np = np.load('waypoints/waypoints/02_09_wp_belok_besar.npy')
 
 # In the Arduino, CW is positive and CCW is negative
 # On the other hand, in the controller algoritm, CCW is positive and CW is negative
 max_steer = 35.; min_steer = -28. # For the path following control algoritm ~ degree
 max_steer_arduino = 28.; min_steer_arduino = -35. # For the Arduino ~ degree
-max_brake = 2.9; max_throttle = 0.25; min_throttle = 0.0
+max_brake = 2.9; max_throttle = 0.25; min_throttle = 0.0; min_throttle_move = 0.08
+min_vel_move = 0.5 # m/s
 
 kp = 0.11; ki = 0.3; kd = 0.015
 ff_long = np.array([0.0, 0.0]) # no feed-forward
-ks = 1.; kv = 1.0; kff_lat = 1.7; dead_band_limit = 0.025
-# kv_lat = 1.5; kv_yaw = 1.5; kv_throttle = 2.5
-kv_lat = 0.0; kv_yaw = 0.0; kv_throttle = 2.5
+ks = 1.0; kv = 1.0; kff_lat = 1.7; dead_band_limit = 0.025
+kv_lat = 1.0; kv_yaw = 3.0; kv_throttle = 2.5 # Speed / Throttle Additional Control
+# kv_lat = 3.0; kv_yaw = 4.0; kv_throttle = 2.5 # Speed / Throttle Additional Control
 kp_lat = 15. * np.pi / 180.
+ki_lat = 1. * np.pi / 180.
 kd_lat = 30. * np.pi / 180.
+lat_max_int = 4. * np.pi / 180.
 sat_long = np.array([-np.abs(max_brake), np.abs(max_throttle)])
 sat_lat = np.array([-np.abs(min_steer), np.abs(max_steer)])
 sat_lat = sat_lat * np.pi / 180.
@@ -33,26 +38,29 @@ RUN = False
 
 def main():
     global RUN
+
+    # Create the controller object
+    controller = Controller(kp, ki, kd, ff_long, sat_long,
+                            ks, kv, kff_lat, dead_band_limit, sat_lat,
+                            waypoints_np, min_vel_move, max_throttle, min_throttle_move,
+                            kv_yaw, kv_lat, kv_throttle,
+                            kp_lat, ki_lat, kd_lat, lat_max_int)
+
     def callback(msg_nav):
         global state
         global RUN
-        
+
         state['x'] = msg_nav.px
         state['y'] = msg_nav.py
         state['v'] = np.sqrt(msg_nav.vx**2 + msg_nav.vy**2)
         # state['yaw'] = msg_nav.yaw
         state['yaw'] = msg_nav.yaw_imu
-        
-        RUN = True
-    
-    # Create the controller object
-    controller = Controller(kp, ki, kd, ff_long, sat_long,
-                            ks, kv, kff_lat, dead_band_limit, sat_lat,
-                            waypoints_np,max_throttle, min_throttle,
-                            kv_yaw, kv_lat, kv_throttle,
-                            kp_lat, kd_lat)
 
-    rospy.init_node('control')     
+        controller.update_elat_moving_average(state['x'], state['y'], state['v'], state['yaw'])
+
+        RUN = True
+
+    rospy.init_node('control')
     rospy.Subscriber('/state_2d', State_EKF_2D, callback)
     pub = rospy.Publisher('/control_signal', Control, queue_size=1)
     rate = rospy.Rate(freq) # Hz
@@ -62,6 +70,7 @@ def main():
     while not RUN:
         time.sleep(0.02) # 20 ms
         pass
+
     print("Data Navigasi sudah masuk !")
     print("Program sudah berjalan !")
 

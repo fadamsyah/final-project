@@ -9,7 +9,9 @@ from sensor_msgs.msg import Imu
 from pkg_ta.msg import State_EKF_2D
 
 # Frame
-yawc_compass = np.pi*3/2
+# PID --> np.pi*3/2 + 0.1317
+# Stanley --> np.pi*3/2 + 0.1331
+yawc_compass = np.pi*3/2 + 0.1331
 yawc_imu = yawc_compass - np.pi
 
 var_a = 0.5
@@ -26,7 +28,8 @@ Q[5, 5] = var_bw
 Q[6, 6] = var_bc
 Q[7:,7:] = np.eye(2) * var_bg
 
-J_gnss = np.eye(2) * 0.01
+J_gnss = np.eye(2) * 0.01 # STANLEY
+# J_gnss = np.eye(2) * 1. # PID
 J_compass = np.array([[0.05]])
 P0 = np.ones((11, 11))*0.1
 
