@@ -45,12 +45,12 @@ def main():
         
         q = msg_imu.orientation
         euler = to_euler(q.x, q.y, q.z, q.w)
-        state['yaw'] = euler[-1] * (-1)
+        state['yaw'] = euler[-1] # * (-1) # Dikali mines nya di generate waypoints yakk
         
         RUN_imu = True
     
     rospy.init_node('get_gps_imu_points')
-    rospy.Subscriber('/android/imu', Imu, callback_imu)
+    rospy.Subscriber('/imu', Imu, callback_imu)
     rospy.Subscriber('/fix', NavSatFix, callback_gps)
     pub = rospy.Publisher('/get_waypoints', State, queue_size=1)
     rate = rospy.Rate(freq) # Hz

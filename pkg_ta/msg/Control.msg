@@ -19,3 +19,7 @@ float32 ref_y
 float32 ref_yaw
 float32 ref_speed
 float32 ref_curvature
+
+float32 deg_ref_yaw
+float32 deg_actual_yaw
+float32 deg_error_yaw
