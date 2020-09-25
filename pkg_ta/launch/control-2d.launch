@@ -1,0 +1,6 @@
+<launch>
+  <arg name="control_config_file" default="$(find pkg_ta)/config/params_control.yaml"/>
+  <node pkg="pkg_ta" type="control_2d.py" name="control_node" output="screen">
+    <rosparam file="$(arg control_config_file)" command="load"/>
+  </node>
+</launch>

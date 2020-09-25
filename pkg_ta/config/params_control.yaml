@@ -1,0 +1,39 @@
+#### Controller rate ####
+freq: 20. # (Hz)
+
+#### Longitudinal Control ####
+### Feedforward controller
+ff_1: 0.0
+ff_2: 0.0
+### Feedback controller (PID)
+kp: 0.11
+ki: 0.30
+kd: 0.015
+### Saturation value
+sat_long_max: 0.3 # (%)
+sat_long_min: -2.9 # (cm)
+###
+kv_yaw: 2.25
+kv_lat: 0.75
+### Deadband
+min_vel_move: 0.5 # (m/s)
+max_throttle_move: 0.3 # (%)
+min_throttle_move: 0.095 # (%)
+
+#### Lateral Control ####
+### Feedorward controller
+length: 1.7 # (m)
+### Feedback controller (Stanley)
+ks: 0.75
+kv: 1.00
+### Deadband
+lateral_dead_band: 0.025 # (m)
+### Saturation value
+# In the Arduino, CW is positive and CCW is negative.
+# On the other hand, in the controller algoritm,
+# CCW is positive and CW is negative.
+sat_lat_max: 0.6109 # (rad) 35 degree
+sat_lat_min: -0.4887 # (rad) -28 degree
+
+### Default waypoints
+waypoints_path: 'wp_monev_baru.npy'

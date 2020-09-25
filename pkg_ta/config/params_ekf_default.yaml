@@ -1,0 +1,25 @@
+#### GNSS ####
+var_gnss_pos: 0.01
+ref_lat: -6.8712
+ref_lon: 107.5738
+ref_alt: 768
+var_gnss_heading: 0.1
+gnss_heading_vel_min: 0.25 # (m/s)
+
+#### IMU ####
+# Accelerometer
+var_a: 0.5
+var_ba: 0.5
+calibration_matrix_accelerometer: [[1,0], [0,-1]] # Razor IMU
+# Gyroscope
+var_w: 0.1
+var_bw: 0.05
+calibration_matrix_gyroscope: -1.0 # Razor IMU
+# Compass Static Bias
+compass_yaw_bias: -1.570796 # (rad)
+# Initial bias
+ba0: [-0.5, 0.4]
+bw0: 0.02
+
+#### Additional ####
+stop_vel_max: 0.125 # (m/s)

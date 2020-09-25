@@ -1,0 +1,21 @@
+conda create -n py37 python=3.7
+
+# Jangan lupa, runningnya di environment Conda py37
+conda install -c intel numpy scipy scikit-learn -y
+conda install -c numba numba -y
+conda install -c conda-forge jupyterlab matplotlib plotly nodejs pymap3d pandas -y
+
+# Tambahan untuk Install ROS
+# Jangan lupa, runningnya di environment Conda py37
+sudo apt-get install python3-pip python3-yaml # Ini kurang tau, kenapa sudo
+pip install rospkg catkin_pkg
+pip install pygame
+pip install empy
+conda install -c conda-forge pycryptodome python-gnupg -y
+conda install -c anaconda pycryptodomex -y
+
+# Ini tambahan aja, ga install juga gapapa
+# Tambahan package untuk install ros_robot_localization package
+sudo apt-get install libgeographic-dev
+sudo apt-get install geographiclib-tools
+

@@ -1,4 +1,0 @@
-PID_1 --> kp = 0.1; ki = 0.15; kd = 0.01 (COVARIANCE GNSS BEDA !)
-PID_2 --> kp = 0.1; ki = 0.25; kd = 0.01
-PID_3 --> kp = 0.11; ki = 0.3; kd = 0.015 (TERBAIK !)
-PID_4 --> kp = 0.11; ki = 0.4; kd = 0.015
