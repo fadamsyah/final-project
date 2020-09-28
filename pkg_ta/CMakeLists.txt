@@ -51,14 +51,12 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  Brake.msg
   Control.msg
-  State.msg
   State_EKF_2D.msg
-  Steering.msg
-  LogBrakeCommand.msg
+  State_3D.msg
   LogArduino.msg
   IMU_9_DOF.msg
+  IMU_params.msg
 )
 
 ## Generate services in the 'srv' folder

@@ -3,7 +3,8 @@ conda create -n py37 python=3.7
 # Jangan lupa, runningnya di environment Conda py37
 conda install -c intel numpy scipy scikit-learn -y
 conda install -c numba numba -y
-conda install -c conda-forge jupyterlab matplotlib plotly nodejs pymap3d pandas -y
+conda install -c conda-forge jupyterlab matplotlib plotly nodejs pymap3d pandas sympy -y
+conda install -c anaconda pyserial -y
 
 # Tambahan untuk Install ROS
 # Jangan lupa, runningnya di environment Conda py37

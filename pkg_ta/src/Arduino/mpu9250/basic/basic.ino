@@ -10,6 +10,7 @@ void setup() {
   // serial to display data
   Serial.begin(115200);
   while (!Serial) {}
+  Serial.println("BEGIN");
 
   IMU.begin(); // initializes communication with the MPU-9250
   IMU.setAccelRange(MPU9250::ACCEL_RANGE_2G); // setting the accelerometer full scale range to +/-2G
@@ -30,6 +31,7 @@ void setup() {
 }
 
 void loop() {
+  
   if ((millis() - ros_time) >= ros_period) {
     IMU.readSensor();
 

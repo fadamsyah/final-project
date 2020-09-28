@@ -2,6 +2,12 @@ import numpy as np
 from numba import float64, int64
 from numba.experimental import jitclass
 
+spec = [('p', float64[:]), ('v', float64[:]), ('rpy', float64[:]),
+        ('ba', float64[:]), ('bw', float64[:]), ('br', float64), ('P', float64[:, :]),
+        ('_N', int64), ('_r_eff', float64), ('_g', float64[:]), ('_Q', float64[:, :]),
+        ('_lambda', float64), ('_Wm', float64[:]), ('_Wc', float64[:])]
+
+@jitclass(spec)
 class UKF_IMU(object):
     def __init__(self, p0, v0, rpy0, ba0, bw0, r_eff, g, P0,
                  var_a, var_w, var_ba, var_bw, var_br,
@@ -120,6 +126,10 @@ alpha = 1e-3; kappa = 0.; beta = 2.
 ukf = UKF_IMU(p0, v0, rpy0, ba0, bw0, r_eff, g, P0,
               var_a, var_w, var_ba, var_bw, var_br,
               alpha, kappa, beta)
+
+print("COMPILING ...")
+print("Please Wait ...")
 _ = ukf.get_state()
 _ = ukf.get_cov_sys()
 _ = ukf.predict(0.01, np.array([0.1,0.2,9.78]), np.array([0.005,0.005,2.0]))
+print('Done !')

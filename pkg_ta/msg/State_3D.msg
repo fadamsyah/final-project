@@ -1,0 +1,8 @@
+Header header
+geometry_msgs/Vector3 position
+geometry_msgs/Vector3 velocity
+geometry_msgs/Vector3 orientation
+geometry_msgs/Vector3 accelerometer_bias
+geometry_msgs/Vector3 gyroscope_bias
+float64 wheel_radius_bias
+float64[256] covariance

@@ -1,0 +1,4 @@
+geometry_msgs/Vector3 accelerometer_scale
+geometry_msgs/Vector3 gyroscope_scale
+geometry_msgs/Vector3 magnetometer_hard_iron
+float64[9] magnetometer_soft_iron
